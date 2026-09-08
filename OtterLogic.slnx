@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OtterLogic.SixDofBehaviour/OtterLogic.SixDofBehaviour.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OtterLogic.SixDofBehaviour.Tests/OtterLogic.SixDofBehaviour.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,185 @@
+{
+  "version": 4,
+  "targets": {
+    "net7.0-windows": {
+      "RhinoCommon/8.0.23304.9001": {
+        "type": "package",
+        "compile": {
+          "lib/net48/Ed.Eto.dll": {
+            "related": ".xml"
+          },
+          "lib/net48/Eto.dll": {
+            "related": ".xml"
+          },
+          "lib/net48/Rhino.UI.dll": {},
+          "lib/net48/RhinoCommon.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net48/_._": {
+            "related": ".xml"
+          }
+        },
+        "build": {
+          "build/net48/_._": {}
+        }
+      },
+      "OtterLogic.Core/0.1.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v7.0",
+        "dependencies": {
+          "RhinoCommon": "8.0.23304.9001"
+        },
+        "compile": {
+          "bin/placeholder/OtterLogic.Core.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/OtterLogic.Core.dll": {}
+        }
+      },
+      "OtterLogic.MachineLearning/0.1.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v7.0",
+        "dependencies": {
+          "OtterLogic.Core": "0.1.0"
+        },
+        "compile": {
+          "bin/placeholder/OtterLogic.MachineLearning.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/OtterLogic.MachineLearning.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "RhinoCommon/8.0.23304.9001": {
+      "sha512": "hWuqXjcj/eb1/z8+bml4Bav/8Oug2p6t0mAVf37GhX9sP+M1aYNO9FappqeN8oefcIBkLBmAzr46DYNhTxFAGQ==",
+      "type": "package",
+      "path": "rhinocommon/8.0.23304.9001",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Eto-LICENSE.txt",
+        "build/net48/RhinoCommon.targets",
+        "lib/net48/Ed.Eto.dll",
+        "lib/net48/Ed.Eto.xml",
+        "lib/net48/Eto.dll",
+        "lib/net48/Eto.xml",
+        "lib/net48/Rhino.UI.dll",
+        "lib/net48/RhinoCommon.dll",
+        "lib/net48/RhinoCommon.xml",
+        "rhinocommon.8.0.23304.9001.nupkg.sha512",
+        "rhinocommon.nuspec",
+        "rhinocommon.png"
+      ]
+    },
+    "OtterLogic.Core/0.1.0": {
+      "type": "project",
+      "path": "../../../Core/src/OtterLogic.Core/OtterLogic.Core.csproj",
+      "msbuildProject": "../../../Core/src/OtterLogic.Core/OtterLogic.Core.csproj"
+    },
+    "OtterLogic.MachineLearning/0.1.0": {
+      "type": "project",
+      "path": "../../../MachineLearning/src/OtterLogic.MachineLearning/OtterLogic.MachineLearning.csproj",
+      "msbuildProject": "../../../MachineLearning/src/OtterLogic.MachineLearning/OtterLogic.MachineLearning.csproj"
+    }
+  },
+  "projectFileDependencyGroups": {
+    "net7.0-windows": [
+      "OtterLogic.Core >= 0.1.0",
+      "OtterLogic.MachineLearning >= 0.1.0"
+    ]
+  },
+  "packageFolders": {
+    "C:\\Users\\being\\.nuget\\packages\\": {}
+  },
+  "project": {
+    "version": "0.1.0",
+    "restore": {
+      "projectUniqueName": "C:\\Users\\being\\OneDrive\\Documents\\GitHub\\6DOF_Behaviour_Classifier\\src\\OtterLogic.SixDofBehaviour\\OtterLogic.SixDofBehaviour.csproj",
+      "projectName": "OtterLogic.SixDofBehaviour",
+      "projectPath": "C:\\Users\\being\\OneDrive\\Documents\\GitHub\\6DOF_Behaviour_Classifier\\src\\OtterLogic.SixDofBehaviour\\OtterLogic.SixDofBehaviour.csproj",
+      "packagesPath": "C:\\Users\\being\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\being\\OneDrive\\Documents\\GitHub\\6DOF_Behaviour_Classifier\\src\\OtterLogic.SixDofBehaviour\\obj\\",
+      "projectStyle": "PackageReference",
+      "configFilePaths": [
+        "C:\\Users\\being\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+      ],
+      "originalTargetFrameworks": [
+        "net7.0-windows"
+      ],
+      "sources": {
+        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+        "https://api.nuget.org/v3/index.json": {}
+      },
+      "frameworks": {
+        "net7.0-windows": {
+          "framework": "net7.0-windows7.0",
+          "targetAlias": "net7.0-windows",
+          "projectReferences": {
+            "C:\\Users\\being\\OneDrive\\Documents\\GitHub\\Core\\src\\OtterLogic.Core\\OtterLogic.Core.csproj": {
+              "projectPath": "C:\\Users\\being\\OneDrive\\Documents\\GitHub\\Core\\src\\OtterLogic.Core\\OtterLogic.Core.csproj"
+            },
+            "C:\\Users\\being\\OneDrive\\Documents\\GitHub\\MachineLearning\\src\\OtterLogic.MachineLearning\\OtterLogic.MachineLearning.csproj": {
+              "projectPath": "C:\\Users\\being\\OneDrive\\Documents\\GitHub\\MachineLearning\\src\\OtterLogic.MachineLearning\\OtterLogic.MachineLearning.csproj"
+            }
+          }
+        }
+      },
+      "warningProperties": {
+        "noWarn": [
+          "NU1701"
+        ],
+        "warnAsError": [
+          "NU1605"
+        ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
+      },
+      "SdkAnalysisLevel": "10.0.300"
+    },
+    "frameworks": {
+      "net7.0-windows": {
+        "framework": "net7.0-windows7.0",
+        "targetAlias": "net7.0-windows",
+        "imports": [
+          "net461",
+          "net462",
+          "net47",
+          "net471",
+          "net472",
+          "net48",
+          "net481"
+        ],
+        "assetTargetFallback": true,
+        "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[7.0.20, 7.0.20]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Ref",
+            "version": "[7.0.20, 7.0.20]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Ref",
+            "version": "[7.0.20, 7.0.20]"
+          }
+        ],
+        "frameworkReferences": {
+          "Microsoft.NETCore.App": {
+            "privateAssets": "all"
+          }
+        },
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.302\\RuntimeIdentifierGraph.json"
+      }
+    }
+  }
+}

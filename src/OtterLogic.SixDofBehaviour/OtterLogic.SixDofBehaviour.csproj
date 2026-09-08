@@ -1,0 +1,55 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OtterLogic.SixDofBehaviour</RootNamespace>
+    <AssemblyName>OtterLogic.SixDofBehaviour</AssemblyName>
+    <!-- A toolkit: the end product built on the MachineLearning engine. No UI,
+         no Grasshopper, and no dependency on any sibling toolkit.
+
+         The display name everywhere a user sees it is "6DOF Behaviour
+         Classifier". It cannot be the assembly name because a C# identifier
+         cannot start with a digit. -->
+
+    <IsPackable>true</IsPackable>
+    <PackageId>OtterLogic.SixDofBehaviour</PackageId>
+    <Description>Six-degree-of-freedom behaviour classification for structural analysis results, built on OtterLogic.MachineLearning.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Otter-Logic/6DOF_Behaviour_Classifier</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Otter-Logic/6DOF_Behaviour_Classifier</RepositoryUrl>
+    <PackageTags>rhino;rhino3d;grasshopper;computational-design;machine-learning;structural</PackageTags>
+
+  </PropertyGroup>
+
+  <!-- No package references of its own. Everything numerical comes from
+       MachineLearning, which carries none either. -->
+
+  <!-- A sibling checkout wins; the published package is the fallback. Clone the
+       repos side by side and the inner loop is unchanged; CI has no siblings, so
+       it builds against the published packages. -->
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\Core\src\OtterLogic.Core\OtterLogic.Core.csproj')">
+      <ItemGroup>
+        <ProjectReference Include="..\..\..\Core\src\OtterLogic.Core\OtterLogic.Core.csproj" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PackageReference Include="OtterLogic.Core" Version="[$(Version)]" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\MachineLearning\src\OtterLogic.MachineLearning\OtterLogic.MachineLearning.csproj')">
+      <ItemGroup>
+        <ProjectReference Include="..\..\..\MachineLearning\src\OtterLogic.MachineLearning\OtterLogic.MachineLearning.csproj" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PackageReference Include="OtterLogic.MachineLearning" Version="[$(Version)]" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+</Project>
