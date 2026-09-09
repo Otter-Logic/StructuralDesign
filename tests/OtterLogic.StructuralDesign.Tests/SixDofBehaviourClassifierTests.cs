@@ -1,13 +1,21 @@
-using Xunit;
+﻿using Xunit;
 
-namespace OtterLogic.Clustering.Tests;
+using OtterLogic.Unsupervised.Clustering;
+
+namespace OtterLogic.StructuralDesign.Tests;
 
 /// <summary>
 /// The classifier's job is to pick the right model for the data in front of it,
 /// so the tests build data where the right answer is known by construction and
 /// check it picks that.
+/// <para>
+/// These run over six-degree-of-freedom demand deliberately. The selection
+/// mechanism is tested generically in the Unsupervised repo; what is tested here
+/// is that the structural preprocessing in front of it produces data the
+/// mechanism can read correctly.
+/// </para>
 /// </summary>
-public class ClustererTests
+public class SixDofBehaviourClassifierTests
 {
     private const int Seed = 20;
 
@@ -25,7 +33,7 @@ public class ClustererTests
                 new[] { 500.0, 200, 30, 100, 110, 20 },
             });
 
-        var result = Clusterer.Classify(data);
+        var result = SixDofBehaviourClassifier.Classify(data);
 
         Assert.Equal(ClusteringModel.KMeans, result.Chosen);
         Assert.Equal(4, result.Groups);
@@ -47,7 +55,7 @@ public class ClustererTests
                 new[] { 120.0, 90, 44, 34, 55, 22 },
             });
 
-        var result = Clusterer.Classify(data);
+        var result = SixDofBehaviourClassifier.Classify(data);
 
         Assert.Equal(ClusteringModel.GaussianMixture, result.Chosen);
         Assert.Empty(result.Unassigned());
@@ -66,7 +74,7 @@ public class ClustererTests
                 new[] { 30.0, 25, 180, 10, 15, 85 },
             });
 
-        var result = Clusterer.Classify(data);
+        var result = SixDofBehaviourClassifier.Classify(data);
 
         Assert.Equal(ClusteringModel.Hdbscan, result.Chosen);
         Assert.NotEmpty(result.Unassigned());
@@ -87,7 +95,7 @@ public class ClustererTests
                 new[] { 30.0, 25, 0, 0, 15, 0 },
             });
 
-        var result = Clusterer.Classify(data);
+        var result = SixDofBehaviourClassifier.Classify(data);
 
         Assert.Equal(3, result.KeptColumns.Length);
         Assert.Equal(6, result.InputColumnCount);
@@ -104,7 +112,7 @@ public class ClustererTests
         };
 
         var data = Families(spread: 0.5, outlierFraction: 0.0, centres: centres);
-        var result = Clusterer.Classify(data);
+        var result = SixDofBehaviourClassifier.Classify(data);
 
         // Every reported centre should be close to one of the centres the data
         // was built around, in the units it arrived in.
@@ -138,8 +146,11 @@ public class ClustererTests
                 new[] { 60.0, 140, 20, 95, 12, 8 },
             });
 
-        var result = Clusterer.Classify(
-            data, new ClusteringOptions { Model = ClusteringModel.Hdbscan });
+        var result = SixDofBehaviourClassifier.Classify(
+            data, new SixDofClassificationOptions
+            {
+                Selection = new ClusterSelectorOptions { Model = ClusteringModel.Hdbscan },
+            });
 
         Assert.Equal(ClusteringModel.Hdbscan, result.Chosen);
         Assert.Equal(3, result.Candidates.Count);
@@ -158,8 +169,8 @@ public class ClustererTests
                 new[] { 30.0, 25, 180, 10, 15, 85 },
             });
 
-        var first = Clusterer.Classify(data);
-        var second = Clusterer.Classify(data);
+        var first = SixDofBehaviourClassifier.Classify(data);
+        var second = SixDofBehaviourClassifier.Classify(data);
 
         Assert.Equal(first.Chosen, second.Chosen);
         Assert.Equal(first.Labels, second.Labels);
@@ -169,7 +180,7 @@ public class ClustererTests
     public void TooFewMembers_FailsWithSomethingReadable()
     {
         var data = new double[3, 6];
-        var error = Assert.Throws<ArgumentException>(() => Clusterer.Classify(data));
+        var error = Assert.Throws<ArgumentException>(() => SixDofBehaviourClassifier.Classify(data));
         Assert.Contains("at least four members", error.Message);
     }
 

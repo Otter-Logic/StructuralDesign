@@ -1,52 +1,61 @@
-# Clustering Tool
+# StructuralDesign
 
-Groups structural members by how they behave, from the six-degree-of-freedom
-demand on each one. Feed it analysis results, read the groups off.
+Tools that act on structural analysis results rather than producing geometry.
+Feed them what came out of the analysis, read the answer off.
 
-The end product of the OtterLogic clustering stack. It sits above
-[MachineLearning](https://github.com/Otter-Logic/MachineLearning), which holds
-the algorithms, and it exists so that using them does not require knowing
-anything about them.
+A domain toolkit, sibling to
+[StructuralForm](https://github.com/Otter-Logic/StructuralForm) — which generates
+a structure, where this one answers questions about a structure that already
+exists.
 
 ```
-Core  ->  MachineLearning  ->  Clustering Tool
-          (K-means, GMM,       (this repo: which one, and why)
-           HDBSCAN, PCA)
+Core  ->  MachineLearning  ->  Unsupervised  ->  StructuralDesign
+          (features, PCA)      (the methods)     (this repo: what
+                                                  the numbers mean)
 ```
 
-The repo is `Clustering_Tool` and the assembly inside it is
-`OtterLogic.Clustering`, following `Document_Tool` — the folder name is the odd
-one out, not the assembly. Both are named for the technique, because that is
-what the Grasshopper section holding them is called.
+## What is here
 
-The tool itself is not general. It is specifically for six-degree-of-freedom
-demand out of a structural analysis, one row per member — that is what the
-defaults are tuned for and what every choice below is reasoned about — and it is
-called the **6DOF Behaviour Classifier** everywhere a user meets it.
+**6DOF Behaviour Classifier** — groups structural members by how they behave,
+from the six-degree-of-freedom demand on each one. One input, no settings.
 
-## What it does
+More will follow on the same pattern: deflection surrogates, section sizers,
+capacity classifiers. They share the demand-column feature extraction, which is
+the thing that makes them siblings.
 
-One call, four steps, no settings.
+## The rule this repo exists to demonstrate
 
-**1. Standardise and reduce.** Each degree of freedom is standardised — forces
-in kN sit beside moments in kNm with no shared scale — then projected onto three
+> **A purpose-built model lives in the toolkit for the domain it has an opinion
+> about — never in the layer that owns the algorithm.** The layer owns the
+> mechanism; the toolkit owns what the numbers mean.
+
+The classifier used to be one class doing both. It is now split on exactly that
+line:
+
+| | Lives in | Because |
+|---|---|---|
+| Fit k-means and a mixture across a range of counts, fit HDBSCAN once, score all three, apply the selection rules | `Unsupervised.ClusterSelector` | it is about the shape of a point cloud, which is not a structural question |
+| Standardise per degree of freedom, no log transform, three components, the Fx…Mz column contract, centres back in the original units | `StructuralDesign.SixDofBehaviourClassifier` | every one of those is a claim about demand data |
+
+The payoff is concrete: a Fabrication tool grouping panels extracts its own
+features — area, corner angles, curvature — and calls the same `ClusterSelector`.
+No domain-to-domain reference, and no second copy of the selection logic to keep
+in step.
+
+## How the classifier works
+
+**1. Standardise and reduce.** Each degree of freedom is standardised — forces in
+kN sit beside moments in kNm with no shared scale — then projected onto three
 principal components. Three because demand across six degrees of freedom is
 strongly correlated, so the members of a real structure lie close to a
 low-dimensional surface inside the six. What is dropped is mostly noise.
 
 There is deliberately **no log transform**. Demands are on a scale where the gap
 between two values carries the meaning; a log compresses the large end and
-inflates the small one, changing which members look alike for no physical
-reason.
+inflates the small one, changing which members look alike for no physical reason.
 
-**2. Fit all three models.** k-means and a Gaussian mixture across a range of
-group counts, HDBSCAN once — it is not told how many groups to find, because
-finding out is what it does.
-
-**3. Score them.** Silhouette and Davies-Bouldin, plus the share of members each
-model leaves on a boundary or in no group at all.
-
-**4. Choose.**
+**2. Hand it to `ClusterSelector`**, which fits all three models, scores them,
+and chooses:
 
 | The data is | Chosen | Because |
 |---|---|---|
@@ -54,61 +63,18 @@ model leaves on a boundary or in no group at all.
 | overlapping | **Gaussian mixture** | only it can say a member sits between two behaviours |
 | messy, with genuine one-offs | **HDBSCAN** | only it can leave a member unassigned |
 
-### Why the choice is not a leaderboard
+**3. Map the centres back** through the whitening, the components and the
+standardisation, into the degrees of freedom the analysis produced. That is the
+step that makes a group nameable — "group two is the high-torsion family" —
+and a group nobody can name is a group nobody will design for.
 
-The obvious design — score all three on silhouette and take the winner — does
-not work, and it fails in a direction that is easy to miss.
+## Layout
 
-Silhouette and Davies-Bouldin both reward compact, round, well-separated
-clusters. That is *exactly what k-means optimises*. Ranking the three on those
-metrics is a contest where the referee and one of the players share a definition
-of good, and k-means wins almost regardless of the data. Measured on two
-interleaved crescents, where HDBSCAN recovers the true grouping exactly
-(adjusted Rand 1.000) and k-means fails badly (0.222), the silhouette still
-prefers k-means, 0.49 to 0.33.
-
-So each hypothesis is tested by the measure that can actually answer it:
-
-- **messy** — HDBSCAN's noise fraction, the only model that produces one
-- **overlapping** — the *share of members* below 0.75 posterior probability in
-  the mixture, the only model that assigns softly
-- **clean** — silhouette, which is trustworthy on precisely this question, and
-  is what is left when neither of the others fires
-
-Two details in there are load-bearing. The overlap test is a tail measure, not a
-mean: overlap is a property of the boundary, and even where families genuinely
-intermingle most members sit clearly inside one, so the mean stays high — on
-data overlapping heavily enough to be indistinguishable it still read 0.87 to
-0.98. And the noise fraction has a ceiling as well as a floor: on that same data
-HDBSCAN left 47–77% of members unplaced, which is not "found outliers", it is
-"found nothing".
-
-## Using it
-
-```csharp
-var result = Clusterer.Classify(demands);
-
-result.Chosen;      // ClusteringModel.KMeans | GaussianMixture | Hdbscan
-result.Rationale;   // one sentence, in the terms the choice was made on
-result.Labels;      // group per member, -1 for unassigned
-result.Centres;     // group centres back in Fx..Mz
-result.Report();    // everything, including how the models that lost scored
+```
+src/OtterLogic.StructuralDesign/   the library, published as a NuGet package
+tests/                             xunit; runs anywhere, no Rhino needed
 ```
 
-`demands` is n x 6, one row per member: Fx, Fy, Fz, Mx, My, Mz. Other column
-counts work as long as they are consistent.
-
-In Grasshopper it is **6DOF Behaviour Classifier**, one component with one
-required input, under the **Clustering** section. The three raw methods sit
-beside it in the same section for anyone who wants to drive them directly, or
-reproduce this by hand with their own choices.
-
-## Working on it
-
-```bash
-dotnet test
-```
-
-No Rhino and no licence — the clustering is pure numerics, so the tests run on a
-hosted CI runner. They build data where the right model is known by
-construction, and check it gets picked.
+Nothing here touches a Rhino or Grasshopper API. The component lives in
+[Rhino3D](https://github.com/Otter-Logic/Rhino3D), under the **Structural
+Design** section.

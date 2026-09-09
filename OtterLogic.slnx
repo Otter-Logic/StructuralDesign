@@ -1,8 +1,8 @@
-<Solution>
+﻿<Solution>
   <Folder Name="/src/">
-    <Project Path="src/OtterLogic.Clustering/OtterLogic.Clustering.csproj" />
+    <Project Path="src/OtterLogic.StructuralDesign/OtterLogic.StructuralDesign.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/OtterLogic.Clustering.Tests/OtterLogic.Clustering.Tests.csproj" />
+    <Project Path="tests/OtterLogic.StructuralDesign.Tests/OtterLogic.StructuralDesign.Tests.csproj" />
   </Folder>
 </Solution>

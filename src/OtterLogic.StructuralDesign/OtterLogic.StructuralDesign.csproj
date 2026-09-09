@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>OtterLogic.StructuralDesign</RootNamespace>
+    <AssemblyName>OtterLogic.StructuralDesign</AssemblyName>
+    <!-- A domain toolkit: tools that act on analysis results rather than
+         producing geometry. No UI, no Grasshopper, and no dependency on any
+         sibling toolkit.
+
+         Named for the domain it has an opinion about, not for the algorithm it
+         happens to use - that lives one layer down in OtterLogic.Unsupervised,
+         where a fabrication toolkit can reach it too. The Grasshopper section is
+         "Structural Design". -->
+
+    <IsPackable>true</IsPackable>
+    <PackageId>OtterLogic.StructuralDesign</PackageId>
+    <Description>Tools that act on structural analysis results for the OtterLogic Rhino tools - grouping members by six-degree-of-freedom behaviour, with the model chosen from the evidence in the data.</Description>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Otter-Logic/StructuralDesign</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Otter-Logic/StructuralDesign</RepositoryUrl>
+    <PackageTags>rhino;rhino3d;grasshopper;computational-design;machine-learning;structural</PackageTags>
+
+  </PropertyGroup>
+
+  <!-- No package references of its own. Everything numerical comes from
+       Unsupervised and MachineLearning, which carry none either. -->
+
+  <!-- A sibling checkout wins; the published package is the fallback. Clone the
+       repos side by side and the inner loop is unchanged; CI has no siblings, so
+       it builds against the published packages. -->
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\Core\src\OtterLogic.Core\OtterLogic.Core.csproj')">
+      <ItemGroup>
+        <ProjectReference Include="..\..\..\Core\src\OtterLogic.Core\OtterLogic.Core.csproj" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PackageReference Include="OtterLogic.Core" Version="[$(Version)]" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\Unsupervised\src\OtterLogic.Unsupervised\OtterLogic.Unsupervised.csproj')">
+      <ItemGroup>
+        <ProjectReference Include="..\..\..\Unsupervised\src\OtterLogic.Unsupervised\OtterLogic.Unsupervised.csproj" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PackageReference Include="OtterLogic.Unsupervised" Version="[$(Version)]" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+</Project>
