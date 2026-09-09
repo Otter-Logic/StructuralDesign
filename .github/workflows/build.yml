@@ -1,0 +1,71 @@
+name: build
+
+# Build *and test*, unlike Core, StructuralForm and Rhino3D. The classifier is
+# arithmetic over arrays and touches no Rhino API, so the tests need neither
+# Rhino nor a licence and run on a hosted runner exactly as they do locally.
+# That is worth having here in particular: these tests assert that the right
+# model is chosen for data whose right answer is known by construction, which is
+# the behaviour a refactor is most likely to change without anything failing to
+# compile.
+#
+# `windows-latest` only because the target framework is net7.0-windows, which
+# follows Core rather than any need of this code. The test project sets
+# RollForward=LatestMajor, so it runs on whatever the runner has.
+#
+# Three siblings. This repo names Core and Unsupervised; Unsupervised in turn
+# references MachineLearning, so that has to be on disk too even though nothing
+# here names it. Miss one and it falls through to a NuGet package that does not
+# exist yet, which fails *restore* and reads as a missing package rather than a
+# missing checkout.
+#
+# Cross-repo checkouts authenticate with OTTER_CI_TOKEN, a PAT with read access
+# to Otter-Logic. The automatic GITHUB_TOKEN is scoped to the one repository
+# running the job, so it can check this repo out but not its siblings - which
+# works only while they are public. The self-checkout keeps GITHUB_TOKEN
+# deliberately: checkout persists whatever token it is given into the local git
+# config, so the PAT goes only where it is needed.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: StructuralDesign
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Otter-Logic/Core
+          path: Core
+          token: ${{ secrets.OTTER_CI_TOKEN }}
+
+      # The machine learning stack, bottom up: the shared base, then the
+      # paradigm repo whose ClusterSelector this toolkit calls.
+      - uses: actions/checkout@v4
+        with:
+          repository: Otter-Logic/MachineLearning
+          path: MachineLearning
+          token: ${{ secrets.OTTER_CI_TOKEN }}
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Otter-Logic/Unsupervised
+          path: Unsupervised
+          token: ${{ secrets.OTTER_CI_TOKEN }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: dotnet build StructuralDesign/OtterLogic.slnx -c Release
+
+      - name: Test
+        run: dotnet test StructuralDesign/OtterLogic.slnx -c Release --no-build
