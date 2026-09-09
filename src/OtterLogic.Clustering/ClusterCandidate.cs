@@ -1,4 +1,4 @@
-namespace OtterLogic.SixDofBehaviour;
+namespace OtterLogic.Clustering;
 
 /// <summary>
 /// One model's attempt at the data, with every score the choice was made on.
@@ -36,8 +36,8 @@ namespace OtterLogic.SixDofBehaviour;
 /// Fraction of members the model declined to place. Zero for k-means and the
 /// mixture by construction — only HDBSCAN can leave a member out.
 /// </param>
-public readonly record struct BehaviourCandidate(
-    BehaviourModel Model,
+public readonly record struct ClusterCandidate(
+    ClusteringModel Model,
     int Groups,
     int[] Labels,
     double[] Confidence,

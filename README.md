@@ -1,4 +1,4 @@
-# 6DOF Behaviour Classifier
+# Clustering Tool
 
 Groups structural members by how they behave, from the six-degree-of-freedom
 demand on each one. Feed it analysis results, read the groups off.
@@ -9,14 +9,20 @@ the algorithms, and it exists so that using them does not require knowing
 anything about them.
 
 ```
-Core  ->  MachineLearning  ->  6DOF Behaviour Classifier
+Core  ->  MachineLearning  ->  Clustering Tool
           (K-means, GMM,       (this repo: which one, and why)
            HDBSCAN, PCA)
 ```
 
-The assembly is `OtterLogic.SixDofBehaviour` because a C# identifier cannot
-start with a digit. Everywhere a user sees it, the tool is called **6DOF
-Behaviour Classifier**.
+The repo is `Clustering_Tool` and the assembly inside it is
+`OtterLogic.Clustering`, following `Document_Tool` — the folder name is the odd
+one out, not the assembly. Both are named for the technique, because that is
+what the Grasshopper section holding them is called.
+
+The tool itself is not general. It is specifically for six-degree-of-freedom
+demand out of a structural analysis, one row per member — that is what the
+defaults are tuned for and what every choice below is reasoned about — and it is
+called the **6DOF Behaviour Classifier** everywhere a user meets it.
 
 ## What it does
 
@@ -80,9 +86,9 @@ HDBSCAN left 47–77% of members unplaced, which is not "found outliers", it is
 ## Using it
 
 ```csharp
-var result = SixDofBehaviourClassifier.Classify(demands);
+var result = Clusterer.Classify(demands);
 
-result.Chosen;      // BehaviourModel.KMeans | GaussianMixture | Hdbscan
+result.Chosen;      // ClusteringModel.KMeans | GaussianMixture | Hdbscan
 result.Rationale;   // one sentence, in the terms the choice was made on
 result.Labels;      // group per member, -1 for unassigned
 result.Centres;     // group centres back in Fx..Mz
@@ -92,10 +98,10 @@ result.Report();    // everything, including how the models that lost scored
 `demands` is n x 6, one row per member: Fx, Fy, Fz, Mx, My, Mz. Other column
 counts work as long as they are consistent.
 
-In Grasshopper it is one component with one required input, under the **6DOF
-Behaviour** section. The three raw methods live under **Machine Learning** for
-anyone who wants to drive them directly, or reproduce this by hand with their
-own choices.
+In Grasshopper it is **6DOF Behaviour Classifier**, one component with one
+required input, under the **Clustering** section. The three raw methods sit
+beside it in the same section for anyone who wants to drive them directly, or
+reproduce this by hand with their own choices.
 
 ## Working on it
 
@@ -103,6 +109,6 @@ own choices.
 dotnet test
 ```
 
-No Rhino and no licence — the classifier is pure numerics, so the tests run on a
+No Rhino and no licence — the clustering is pure numerics, so the tests run on a
 hosted CI runner. They build data where the right model is known by
 construction, and check it gets picked.

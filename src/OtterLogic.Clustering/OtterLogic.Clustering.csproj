@@ -1,22 +1,24 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <RootNamespace>OtterLogic.SixDofBehaviour</RootNamespace>
-    <AssemblyName>OtterLogic.SixDofBehaviour</AssemblyName>
+    <RootNamespace>OtterLogic.Clustering</RootNamespace>
+    <AssemblyName>OtterLogic.Clustering</AssemblyName>
     <!-- A toolkit: the end product built on the MachineLearning engine. No UI,
          no Grasshopper, and no dependency on any sibling toolkit.
 
-         The display name everywhere a user sees it is "6DOF Behaviour
-         Classifier". It cannot be the assembly name because a C# identifier
-         cannot start with a digit. -->
+         The repo is Clustering_Tool and the project inside it is
+         OtterLogic.Clustering, following Document_Tool - the folder name is the
+         odd one out, not the assembly. Everywhere a user sees it, in the
+         Grasshopper ribbon and in the Rhino panel, the section is
+         "Clustering". -->
 
     <IsPackable>true</IsPackable>
-    <PackageId>OtterLogic.SixDofBehaviour</PackageId>
-    <Description>Six-degree-of-freedom behaviour classification for structural analysis results, built on OtterLogic.MachineLearning.</Description>
+    <PackageId>OtterLogic.Clustering</PackageId>
+    <Description>Clustering that chooses its own model - k-means, Gaussian mixture or HDBSCAN - from the evidence in the data. Built on OtterLogic.MachineLearning, and tuned for structural analysis results.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/Otter-Logic/6DOF_Behaviour_Classifier</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/Otter-Logic/6DOF_Behaviour_Classifier</RepositoryUrl>
-    <PackageTags>rhino;rhino3d;grasshopper;computational-design;machine-learning;structural</PackageTags>
+    <PackageProjectUrl>https://github.com/Otter-Logic/Clustering_Tool</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Otter-Logic/Clustering_Tool</RepositoryUrl>
+    <PackageTags>rhino;rhino3d;grasshopper;computational-design;machine-learning;clustering;structural</PackageTags>
 
   </PropertyGroup>
 

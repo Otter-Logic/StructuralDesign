@@ -1,14 +1,14 @@
-namespace OtterLogic.SixDofBehaviour;
+namespace OtterLogic.Clustering;
 
 /// <summary>
-/// The three clustering models the classifier chooses between.
+/// The three clustering models <see cref="Clusterer"/> chooses between.
 /// <para>
 /// They are not three implementations of one idea. Each assumes something
 /// different about what a behaviour family looks like, and the whole point of
 /// running all three is that the data decides which assumption holds.
 /// </para>
 /// </summary>
-public enum BehaviourModel
+public enum ClusteringModel
 {
     /// <summary>
     /// k-means. Assumes round families of roughly equal size, and puts every

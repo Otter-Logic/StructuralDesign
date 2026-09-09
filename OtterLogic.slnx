@@ -1,8 +1,8 @@
 <Solution>
   <Folder Name="/src/">
-    <Project Path="src/OtterLogic.SixDofBehaviour/OtterLogic.SixDofBehaviour.csproj" />
+    <Project Path="src/OtterLogic.Clustering/OtterLogic.Clustering.csproj" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="tests/OtterLogic.SixDofBehaviour.Tests/OtterLogic.SixDofBehaviour.Tests.csproj" />
+    <Project Path="tests/OtterLogic.Clustering.Tests/OtterLogic.Clustering.Tests.csproj" />
   </Folder>
 </Solution>

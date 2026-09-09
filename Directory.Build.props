@@ -7,7 +7,7 @@
     <!-- Rhino 8 on Windows runs .NET 7. Matched to Core, MachineLearning and the
          other toolkits so every assembly loads into one process without a shim.
 
-         Nothing here touches a Rhino API. The classifier is arithmetic over a
+         Nothing here touches a Rhino API. The clustering is arithmetic over a
          table of numbers, so its tests run on a hosted CI runner with no Rhino
          and no licence. `-windows` follows the rest of the org, not a need. -->
     <TargetFramework>net7.0-windows</TargetFramework>

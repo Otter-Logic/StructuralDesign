@@ -1,7 +1,7 @@
-namespace OtterLogic.SixDofBehaviour;
+namespace OtterLogic.Clustering;
 
 /// <summary>
-/// Settings for the classifier. Every one has a default tuned for
+/// Settings for <see cref="Clusterer"/>. Every one has a default tuned for
 /// six-degree-of-freedom results out of a structural analysis, and the intended
 /// use is to pass none of them.
 /// <para>
@@ -11,7 +11,7 @@ namespace OtterLogic.SixDofBehaviour;
 /// components, which expose everything.
 /// </para>
 /// </summary>
-public sealed record SixDofClassifierOptions
+public sealed record ClusteringOptions
 {
     /// <summary>
     /// Principal components to project onto before clustering.
@@ -54,7 +54,7 @@ public sealed record SixDofClassifierOptions
     /// Forces a model instead of choosing one. Null runs the comparison, which
     /// is the point of the tool.
     /// </summary>
-    public BehaviourModel? Model { get; init; }
+    public ClusteringModel? Model { get; init; }
 
     /// <summary>
     /// Seed for every model that starts randomly. Fixed, so a Grasshopper
@@ -95,7 +95,7 @@ public sealed record SixDofClassifierOptions
     /// One member in ten being a genuine boundary case is enough to matter: a
     /// hard partition would file all of them silently, and the whole value of a
     /// mixture is that it says which ones they are. See
-    /// <c>BehaviourCandidate.AmbiguousFraction</c> for why this is a tail
+    /// <c>ClusterCandidate.AmbiguousFraction</c> for why this is a tail
     /// measure rather than a mean.
     /// </para>
     /// </summary>

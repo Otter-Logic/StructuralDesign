@@ -1,6 +1,6 @@
 using OtterLogic.MachineLearning.Clustering;
 
-namespace OtterLogic.SixDofBehaviour;
+namespace OtterLogic.Clustering;
 
 /// <summary>
 /// Groups structural members by how they behave, from the six-degree-of-freedom
@@ -20,7 +20,7 @@ namespace OtterLogic.SixDofBehaviour;
 /// counts as evidence for each model, and how to decide.
 /// </para>
 /// </summary>
-public static class SixDofBehaviourClassifier
+public static class Clusterer
 {
     /// <summary>
     /// Classifies n members described by their degree-of-freedom demands.
@@ -30,10 +30,10 @@ public static class SixDofBehaviourClassifier
     /// Mx, My, Mz — but any consistent set of demand columns works.
     /// </param>
     /// <param name="options">Settings. The intended call passes none.</param>
-    public static SixDofClassifierResult Classify(double[,] demands, SixDofClassifierOptions? options = null)
+    public static ClusteringResult Classify(double[,] demands, ClusteringOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(demands);
-        options ??= new SixDofClassifierOptions();
+        options ??= new ClusteringOptions();
 
         int n = demands.GetLength(0);
         int d = demands.GetLength(1);
@@ -72,7 +72,7 @@ public static class SixDofBehaviourClassifier
 
         var centres = GroupCentres(reduced, winner, pca, pipeline);
 
-        return new SixDofClassifierResult(
+        return new ClusteringResult(
             chosen, rationale, winner, candidates,
             centres, reduced, pca.ExplainedVarianceRatio,
             pipeline.KeptColumns, d);
@@ -88,7 +88,7 @@ public static class SixDofBehaviourClassifier
     /// itself, where its preference for round clusters is a constant.
     /// </para>
     /// </summary>
-    private static BehaviourCandidate FitKMeans(double[,] x, int minimum, int maximum, int seed)
+    private static ClusterCandidate FitKMeans(double[,] x, int minimum, int maximum, int seed)
     {
         int[]? bestLabels = null;
         double[,]? bestCentroids = null;
@@ -110,8 +110,8 @@ public static class SixDofBehaviourClassifier
         var labels = bestLabels!;
         var confidence = CentroidMargin(x, labels, bestCentroids!);
 
-        return new BehaviourCandidate(
-            BehaviourModel.KMeans,
+        return new ClusterCandidate(
+            ClusteringModel.KMeans,
             Groups(labels),
             labels,
             confidence,
@@ -138,7 +138,7 @@ public static class SixDofBehaviourClassifier
     /// parameters per group.
     /// </para>
     /// </summary>
-    private static BehaviourCandidate FitMixture(double[,] x, int minimum, int maximum, int seed)
+    private static ClusterCandidate FitMixture(double[,] x, int minimum, int maximum, int seed)
     {
         GaussianMixtureResult? best = null;
         double bestBic = double.PositiveInfinity;
@@ -178,8 +178,8 @@ public static class SixDofBehaviourClassifier
         for (int i = 0; i < raw.Length; i++)
             labels[i] = rank[raw[i]];
 
-        return new BehaviourCandidate(
-            BehaviourModel.GaussianMixture,
+        return new ClusterCandidate(
+            ClusteringModel.GaussianMixture,
             Groups(labels),
             labels,
             mixture.Confidence(),
@@ -192,7 +192,7 @@ public static class SixDofBehaviourClassifier
     /// HDBSCAN once. It is not swept, because it is not told how many groups to
     /// find — the count is something it reports.
     /// </summary>
-    private static BehaviourCandidate FitHdbscan(double[,] x, int? minimumClusterSize)
+    private static ClusterCandidate FitHdbscan(double[,] x, int? minimumClusterSize)
     {
         int n = x.GetLength(0);
         var fit = Hdbscan.Fit(x, new HdbscanOptions
@@ -200,8 +200,8 @@ public static class SixDofBehaviourClassifier
             MinimumClusterSize = minimumClusterSize ?? HdbscanOptions.DefaultMinimumClusterSize(n),
         });
 
-        return new BehaviourCandidate(
-            BehaviourModel.Hdbscan,
+        return new ClusterCandidate(
+            ClusteringModel.Hdbscan,
             fit.ClusterCount,
             fit.Labels,
             fit.Probabilities,
@@ -229,11 +229,11 @@ public static class SixDofBehaviourClassifier
     /// trustworthy on.
     /// </para>
     /// </summary>
-    private static (BehaviourModel Model, string Rationale) Choose(
-        SixDofClassifierOptions options,
-        BehaviourCandidate kMeans,
-        BehaviourCandidate mixture,
-        BehaviourCandidate density)
+    private static (ClusteringModel Model, string Rationale) Choose(
+        ClusteringOptions options,
+        ClusterCandidate kMeans,
+        ClusterCandidate mixture,
+        ClusterCandidate density)
     {
         if (options.Model is { } forced)
             return (forced, "the model was specified rather than chosen.");
@@ -246,7 +246,7 @@ public static class SixDofBehaviourClassifier
             && density.NoiseFraction <= options.MessyNoiseCeiling;
 
         if (outliers)
-            return (BehaviourModel.Hdbscan,
+            return (ClusteringModel.Hdbscan,
                 $"{density.NoiseFraction:P0} of members sit outside every dense group, so a model "
                 + "that can leave a member unplaced describes this better than one that must file "
                 + "everything.");
@@ -257,7 +257,7 @@ public static class SixDofBehaviourClassifier
         bool irregular = density.Groups >= 2 && kMeans.Silhouette < options.CleanSilhouetteFloor;
 
         if (irregular)
-            return (BehaviourModel.Hdbscan,
+            return (ClusteringModel.Hdbscan,
                 $"no round partition scores well at any count (best silhouette {kMeans.Silhouette:0.00}), "
                 + "so the behaviours are not the shape k-means and a mixture assume.");
 
@@ -266,12 +266,12 @@ public static class SixDofBehaviourClassifier
         // share of boundary members that says so, not the average confidence,
         // which stays high even when families genuinely intermingle.
         if (mixture.AmbiguousFraction >= options.OverlapAmbiguousShare)
-            return (BehaviourModel.GaussianMixture,
+            return (ClusteringModel.GaussianMixture,
                 $"{mixture.AmbiguousFraction:P0} of members sit between two behaviours rather than "
                 + "inside one, so a soft assignment reports the structure where a hard split would "
                 + "file them silently.");
 
-        return (BehaviourModel.KMeans,
+        return (ClusteringModel.KMeans,
             $"behaviours are clean and well separated (silhouette {kMeans.Silhouette:0.00}, "
             + $"{mixture.AmbiguousFraction:P0} of members on a boundary), so the simplest model is "
             + "the honest one.");
@@ -332,7 +332,7 @@ public static class SixDofBehaviourClassifier
     /// </para>
     /// </summary>
     private static double[,] GroupCentres(
-        double[,] reduced, BehaviourCandidate winner, PrincipalComponents pca, FeaturePipeline pipeline)
+        double[,] reduced, ClusterCandidate winner, PrincipalComponents pca, FeaturePipeline pipeline)
     {
         int n = reduced.GetLength(0);
         int width = reduced.GetLength(1);

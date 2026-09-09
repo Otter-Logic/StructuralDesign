@@ -1,20 +1,20 @@
 using System.Globalization;
 using System.Text;
 
-namespace OtterLogic.SixDofBehaviour;
+namespace OtterLogic.Clustering;
 
 /// <summary>
 /// The outcome of a classification: which model was chosen and why, where every
 /// member ended up, and what each behaviour looks like in the units the analysis
 /// produced.
 /// </summary>
-public sealed class SixDofClassifierResult
+public sealed class ClusteringResult
 {
-    internal SixDofClassifierResult(
-        BehaviourModel chosen,
+    internal ClusteringResult(
+        ClusteringModel chosen,
         string rationale,
-        BehaviourCandidate winner,
-        IReadOnlyList<BehaviourCandidate> candidates,
+        ClusterCandidate winner,
+        IReadOnlyList<ClusterCandidate> candidates,
         double[,] centres,
         double[,] projection,
         double explainedVariance,
@@ -33,7 +33,7 @@ public sealed class SixDofClassifierResult
     }
 
     /// <summary>Which model the comparison chose.</summary>
-    public BehaviourModel Chosen { get; }
+    public ClusteringModel Chosen { get; }
 
     /// <summary>
     /// One sentence saying why, in the terms the choice was actually made on.
@@ -42,10 +42,10 @@ public sealed class SixDofClassifierResult
     public string Rationale { get; }
 
     /// <summary>The chosen model's candidate, with its scores.</summary>
-    public BehaviourCandidate Winner { get; }
+    public ClusterCandidate Winner { get; }
 
     /// <summary>All three candidates, chosen or not, in model order.</summary>
-    public IReadOnlyList<BehaviourCandidate> Candidates { get; }
+    public IReadOnlyList<ClusterCandidate> Candidates { get; }
 
     /// <summary>Behaviour group per member; <c>-1</c> means unassigned.</summary>
     public int[] Labels => Winner.Labels;
@@ -144,7 +144,7 @@ public sealed class SixDofClassifierResult
             // Only the mixture's confidence is a probability, so only its
             // boundary share means anything. A k-means margin on the same scale
             // reads as though almost everything is borderline.
-            string boundary = candidate.Model == BehaviourModel.GaussianMixture
+            string boundary = candidate.Model == ClusteringModel.GaussianMixture
                 ? (candidate.AmbiguousFraction * 100.0).ToString("0.0", invariant) + "%"
                 : "-";
 
@@ -161,17 +161,17 @@ public sealed class SixDofClassifierResult
         text.AppendLine();
         text.AppendLine(
             "Confidence is each model's own measure and is not comparable between rows. Boundary is "
-            + $"the share of members below {BehaviourCandidate.AmbiguousBelow:0.00} posterior "
+            + $"the share of members below {ClusterCandidate.AmbiguousBelow:0.00} posterior "
             + "probability, which only the mixture has; unplaced is the share in no group at all.");
 
         return text.ToString().TrimEnd();
     }
 
-    internal static string Name(BehaviourModel model) => model switch
+    internal static string Name(ClusteringModel model) => model switch
     {
-        BehaviourModel.KMeans => "K-Means",
-        BehaviourModel.GaussianMixture => "Gaussian Mixture",
-        BehaviourModel.Hdbscan => "HDBSCAN",
+        ClusteringModel.KMeans => "K-Means",
+        ClusteringModel.GaussianMixture => "Gaussian Mixture",
+        ClusteringModel.Hdbscan => "HDBSCAN",
         _ => model.ToString(),
     };
 }
