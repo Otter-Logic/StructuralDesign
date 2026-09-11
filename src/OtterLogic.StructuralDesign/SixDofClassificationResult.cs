@@ -25,13 +25,15 @@ public sealed class SixDofClassificationResult
         double[,] centres,
         double explainedVariance,
         int[] keptColumns,
-        int inputColumnCount)
+        int inputColumnCount,
+        string[]? columnNames = null)
     {
         _selection = selection;
         Centres = centres;
         ExplainedVariance = explainedVariance;
         KeptColumns = keptColumns;
         InputColumnCount = inputColumnCount;
+        ColumnNames = columnNames;
     }
 
     /// <summary>Which model the comparison chose.</summary>
@@ -88,6 +90,13 @@ public sealed class SixDofClassificationResult
     /// <summary>Number of columns supplied.</summary>
     public int InputColumnCount { get; }
 
+    /// <summary>
+    /// What each column of <see cref="Centres"/> is, when the caller said —
+    /// "Fz min", "|My| max". Null when the columns are simply the degrees of
+    /// freedom as supplied.
+    /// </summary>
+    public string[]? ColumnNames { get; }
+
     /// <summary>Members the chosen model declined to place. Only HDBSCAN can produce these.</summary>
     public int[] Unassigned() => _selection.Unassigned();
 
@@ -105,10 +114,12 @@ public sealed class SixDofClassificationResult
         var invariant = CultureInfo.InvariantCulture;
 
         text.AppendLine($"Members      {MemberCount}");
+        var dropped = Enumerable.Range(0, InputColumnCount).Except(KeptColumns)
+            .Select(j => ColumnNames?[j] ?? j.ToString(invariant));
         text.AppendLine(
-            $"Degrees      {KeptColumns.Length} of {InputColumnCount} kept"
+            $"{(ColumnNames is null ? "Degrees " : "Features")}     {KeptColumns.Length} of {InputColumnCount} kept"
             + (KeptColumns.Length < InputColumnCount
-                ? $" (dropped, no variation: {string.Join(", ", Enumerable.Range(0, InputColumnCount).Except(KeptColumns))})"
+                ? $" (dropped, no variation: {string.Join(", ", dropped)})"
                 : string.Empty));
         text.AppendLine(
             $"Components   {Projection.GetLength(1)} retained, "

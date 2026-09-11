@@ -34,6 +34,18 @@ public static class SixDofBehaviourClassifier
     /// <param name="options">Settings. The intended call passes none.</param>
     public static SixDofClassificationResult Classify(
         double[,] demands, SixDofClassificationOptions? options = null)
+        => Classify(demands, options, columnNames: null);
+
+    /// <summary>Fewest members a classification can be run on.</summary>
+    internal const int MinimumMembers = 4;
+
+    /// <summary>
+    /// As above, with a name for each column so the report can say which were
+    /// dropped — needed once the columns are something other than Fx to Mz, such
+    /// as a foundation's shear and moments read by size, |Fx| rather than Fx.
+    /// </summary>
+    internal static SixDofClassificationResult Classify(
+        double[,] demands, SixDofClassificationOptions? options, string[]? columnNames)
     {
         ArgumentNullException.ThrowIfNull(demands);
         options ??= new SixDofClassificationOptions();
@@ -41,7 +53,7 @@ public static class SixDofBehaviourClassifier
         int n = demands.GetLength(0);
         int d = demands.GetLength(1);
 
-        if (n < 4)
+        if (n < MinimumMembers)
             throw new ArgumentException(
                 $"Need at least four members to compare clusterings; got {n}.", nameof(demands));
 
@@ -67,6 +79,6 @@ public static class SixDofBehaviourClassifier
         var centres = pipeline.InverseTransform(pca.InverseTransform(selection.GroupCentres()));
 
         return new SixDofClassificationResult(
-            selection, centres, pca.ExplainedVarianceRatio, pipeline.KeptColumns, d);
+            selection, centres, pca.ExplainedVarianceRatio, pipeline.KeptColumns, d, columnNames);
     }
 }

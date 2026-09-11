@@ -17,8 +17,6 @@ namespace OtterLogic.StructuralDesign.Tests;
 /// </summary>
 public class SixDofBehaviourClassifierTests
 {
-    private const int Seed = 20;
-
     [Fact]
     public void CleanWellSeparatedFamilies_ChooseKMeans()
     {
@@ -184,54 +182,7 @@ public class SixDofBehaviourClassifierTests
         Assert.Contains("at least four members", error.Message);
     }
 
-    /// <summary>
-    /// Builds demand rows around the given family centres, with an optional
-    /// share of members scattered far from all of them.
-    /// </summary>
     private static double[,] Families(
         double spread, double outlierFraction, double[][] centres, int perFamily = 45)
-    {
-        var rng = new Random(Seed);
-        var rows = new List<double[]>();
-
-        foreach (var centre in centres)
-        {
-            for (int i = 0; i < perFamily; i++)
-            {
-                var row = new double[centre.Length];
-                for (int j = 0; j < centre.Length; j++)
-                {
-                    // A zero column is a degree of freedom the structure has
-                    // none of, and stays exactly zero.
-                    row[j] = centre[j] == 0.0 ? 0.0 : Math.Max(0.0, centre[j] + Gauss(rng) * spread);
-                }
-
-                rows.Add(row);
-            }
-        }
-
-        int outliers = (int)Math.Round(rows.Count * outlierFraction / (1.0 - outlierFraction));
-        for (int i = 0; i < outliers; i++)
-        {
-            var row = new double[centres[0].Length];
-            for (int j = 0; j < row.Length; j++)
-                row[j] = centres[0][j] == 0.0 ? 0.0 : rng.NextDouble() * 600.0;
-
-            rows.Add(row);
-        }
-
-        var data = new double[rows.Count, centres[0].Length];
-        for (int i = 0; i < rows.Count; i++)
-            for (int j = 0; j < data.GetLength(1); j++)
-                data[i, j] = rows[i][j];
-
-        return data;
-    }
-
-    private static double Gauss(Random rng)
-    {
-        double u1 = 1.0 - rng.NextDouble();
-        double u2 = 1.0 - rng.NextDouble();
-        return Math.Sqrt(-2.0 * Math.Log(u1)) * Math.Cos(2.0 * Math.PI * u2);
-    }
+        => Demands.Families(spread, outlierFraction, centres, perFamily);
 }
