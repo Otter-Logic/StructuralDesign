@@ -14,7 +14,7 @@
 
     <IsPackable>true</IsPackable>
     <PackageId>OtterLogic.StructuralDesign</PackageId>
-    <Description>Tools that act on structural analysis results for the OtterLogic Rhino tools - grouping members by six-degree-of-freedom behaviour, with the model chosen from the evidence in the data.</Description>
+    <Description>Tools that act on structural analysis results for the OtterLogic Rhino tools - grouping members by six-degree-of-freedom behaviour, and grouping foundations and end plates for design.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Otter-Logic/StructuralDesign</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Otter-Logic/StructuralDesign</RepositoryUrl>

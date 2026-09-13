@@ -5,8 +5,11 @@ Feed them what came out of the analysis, read the answer off.
 
 A domain toolkit, sibling to
 [StructuralForm](https://github.com/Otter-Logic/StructuralForm) — which generates
-a structure, where this one answers questions about a structure that already
-exists.
+a structure — and to
+[Structural-Analysis](https://github.com/Otter-Logic/Structural-Analysis) —
+which reads a model *before* it is analysed. This one answers questions about
+a structure that has already been run: would answering the question need a
+solved force, or only the geometry, is the line between the three.
 
 ```
 Core  ->  MachineLearning  ->  Unsupervised  ->  StructuralDesign

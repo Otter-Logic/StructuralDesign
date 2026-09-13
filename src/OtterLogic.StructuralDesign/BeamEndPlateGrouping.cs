@@ -84,14 +84,9 @@ public static class BeamEndPlateGrouping
         int n = axial.Length;
         int values = axial[0].Length;
 
+        var columns = SixDof.Envelope(forces);
         var envelope = new BeamEndPlateEnvelope(
-            SixDof.Largest(axial),
-            SixDof.Smallest(axial),
-            SixDof.LargestSize(forces[1]),
-            SixDof.LargestSize(forces[2]),
-            SixDof.LargestSize(forces[3]),
-            SixDof.LargestSize(forces[4]),
-            SixDof.LargestSize(forces[5]));
+            columns[0], columns[1], columns[2], columns[3], columns[4], columns[5], columns[6]);
 
         // What governs an end plate, per beam: tension, major shear, major moment.
         var tension = BeamEndPlateGroupingResult.Tension(envelope, options.TensionPositive);

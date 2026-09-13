@@ -21,7 +21,7 @@ namespace OtterLogic.StructuralDesign;
 public sealed class BeamEndPlateEnvelope
 {
     /// <summary>What each of <see cref="Columns"/> is, in order — the order the outputs appear in.</summary>
-    public static readonly IReadOnlyList<string> Names = new[] { "Fx Max", "Fx Min", "Fy", "Fz", "Mx", "My", "Mz" };
+    public static readonly IReadOnlyList<string> Names = SixDof.EnvelopeNames;
 
     internal BeamEndPlateEnvelope(double[] fxMax, double[] fxMin, double[] fy, double[] fz, double[] mx, double[] my, double[] mz)
     {

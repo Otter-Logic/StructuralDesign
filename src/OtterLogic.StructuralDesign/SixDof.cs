@@ -155,6 +155,32 @@ internal static class SixDof
     /// <summary>Each element's smallest value under any combination, with its sign.</summary>
     internal static double[] Smallest(double[][] force) => force.Select(values => values.Min()).ToArray();
 
+    /// <summary>What each column of <see cref="Envelope"/> is, in order.</summary>
+    internal static readonly string[] EnvelopeNames = { "Fx Max", "Fx Min", "Fy", "Fz", "Mx", "My", "Mz" };
+
+    /// <summary>
+    /// Each element's envelope of a member's forces, seven columns: the axial force
+    /// Fx as its largest and smallest value with their signs, and the other five by
+    /// size.
+    /// <para>
+    /// The axial force is the one whose direction changes what a member is — a tie
+    /// or a strut — so it keeps both ends of its range. Shear, torsion and bending
+    /// are the same demand either way round, and taken by size the two ends of a
+    /// member, equal and opposite, read as one. Shared by every tool that reads a
+    /// member end, so the reduction is written once.
+    /// </para>
+    /// </summary>
+    internal static double[][] Envelope(double[][][] forces) => new[]
+    {
+        Largest(forces[0]),
+        Smallest(forces[0]),
+        LargestSize(forces[1]),
+        LargestSize(forces[2]),
+        LargestSize(forces[3]),
+        LargestSize(forces[4]),
+        LargestSize(forces[5]),
+    };
+
     /// <summary>Every force as it came, with its sign: six columns, one per degree of freedom.</summary>
     internal static (double[,] Features, string[] Names) Signed(double[][] forces)
         => Features(
