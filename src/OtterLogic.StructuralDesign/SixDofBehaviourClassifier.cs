@@ -5,46 +5,57 @@ using OtterLogic.Unsupervised.Clustering;
 namespace OtterLogic.StructuralDesign;
 
 /// <summary>
-/// Groups structural members by how they behave, from the six-degree-of-freedom
-/// demand on each one.
+/// Groups elements by how they behave, from six degrees of freedom of data on
+/// each one — whatever those six values are.
 /// <para>
-/// The end product this repo exists for. A caller supplies the numbers and
-/// nothing else.
+/// Multipurpose by design. Member end forces, support reactions, connection
+/// demands, nodal displacements: the classifier does not know which it has been
+/// given, and makes no decision that depends on it. Everything that does — which
+/// load combination governs, whether a force counts by its size or with its sign,
+/// which elements may never share a group — is the user's to decide upstream, in
+/// their own definition, before the six lists arrive. That is the point of it: a
+/// tool that reads foundations one way and end plates another serves those two
+/// jobs and no third, where this serves any job whose preparation somebody can
+/// wire.
 /// </para>
 /// <para>
-/// Deliberately thin. Fitting three models, scoring them and choosing between
-/// them is <see cref="ClusterSelector"/>'s job, and none of that is structural —
-/// a fabrication toolkit grouping panels wants exactly the same mechanism. What
-/// is here is the part that is <em>only</em> true of six-degree-of-freedom
-/// results out of an analysis, and would otherwise have to be rediscovered by
-/// every user: that these columns are forces beside moments, that demand must
-/// not be logged, how many directions such data really varies along, and what
-/// the answer means once it comes back.
+/// What it does own is what is true of any six-degree-of-freedom data and would
+/// otherwise have to be rediscovered by every user: forces and moments sit side by
+/// side with no shared scale, so every column is standardised; they are strongly
+/// correlated, so the data is projected onto the few directions it varies along;
+/// and a value's size carries meaning, so nothing is logged. Fitting k-means, a
+/// Gaussian mixture and HDBSCAN and choosing between them is
+/// <see cref="ClusterSelector"/>'s job one layer down.
 /// </para>
 /// </summary>
 public static class SixDofBehaviourClassifier
 {
-    /// <summary>
-    /// Classifies n members described by their degree-of-freedom demands.
-    /// </summary>
-    /// <param name="demands">
-    /// n x d, one row per member. Six columns is the intended case — Fx, Fy, Fz,
-    /// Mx, My, Mz — but any consistent set of demand columns works.
-    /// </param>
-    /// <param name="options">Settings. The intended call passes none.</param>
-    public static SixDofClassificationResult Classify(
-        double[,] demands, SixDofClassificationOptions? options = null)
-        => Classify(demands, options, columnNames: null);
-
-    /// <summary>Fewest members a classification can be run on.</summary>
+    /// <summary>Fewest elements a classification can be run on.</summary>
     internal const int MinimumMembers = 4;
 
     /// <summary>
-    /// As above, with a name for each column so the report can say which were
-    /// dropped — needed once the columns are something other than Fx to Mz, such
-    /// as a foundation's shear and moments read by size, |Fx| rather than Fx.
+    /// Classifies elements from their six degrees of freedom as six named lists,
+    /// one value per element in each.
     /// </summary>
-    internal static SixDofClassificationResult Classify(
+    /// <exception cref="ArgumentException">The lists are not all the same length, or hold a value that is not finite.</exception>
+    public static SixDofClassificationResult Classify(
+        IReadOnlyList<double> fx, IReadOnlyList<double> fy, IReadOnlyList<double> fz,
+        IReadOnlyList<double> mx, IReadOnlyList<double> my, IReadOnlyList<double> mz,
+        SixDofClassificationOptions? options = null)
+        => Classify(SixDof.Read(fx, fy, fz, mx, my, mz), options, SixDof.Names);
+
+    /// <summary>
+    /// Classifies n elements described by d values each.
+    /// </summary>
+    /// <param name="demands">
+    /// n x d, one row per element. Six columns is the intended case — Fx, Fy, Fz,
+    /// Mx, My, Mz — but any consistent set of columns works.
+    /// </param>
+    /// <param name="options">Settings. The intended call passes none.</param>
+    public static SixDofClassificationResult Classify(double[,] demands, SixDofClassificationOptions? options = null)
+        => Classify(demands, options, columnNames: null);
+
+    private static SixDofClassificationResult Classify(
         double[,] demands, SixDofClassificationOptions? options, string[]? columnNames)
     {
         ArgumentNullException.ThrowIfNull(demands);
@@ -59,12 +70,12 @@ public static class SixDofBehaviourClassifier
 
         options.Validate(n);
 
-        // Standardise every degree of freedom, then project.
+        // Standardise every column, then project.
         //
-        // No log transform. These are signed or unsigned demands on an interval
+        // No log transform. These are signed or unsigned values on an interval
         // scale where the gap between two values is what carries the meaning,
         // and a log would compress the large end and inflate the small one,
-        // changing which members look alike for no physical reason.
+        // changing which elements look alike for no physical reason.
         var pipeline = FeaturePipeline.Fit(demands, logTransform: false, normaliseRows: false, weights: null);
         var standardised = pipeline.Transform(demands);
 
@@ -74,11 +85,47 @@ public static class SixDofBehaviourClassifier
         // Everything from here is generic: fit all three, score them, choose.
         var selection = ClusterSelector.Select(reduced, options.Selection);
 
-        // And back into the units the analysis produced, which is the step that
-        // makes a group nameable.
-        var centres = pipeline.InverseTransform(pca.InverseTransform(selection.GroupCentres()));
+        // The unplaced are dealt with in the space the groups were found in, so
+        // "nearest" means nearest in behaviour rather than in whichever raw column
+        // happens to be largest.
+        var labels = ClusterLabels.ResolveUnplaced(selection.Labels, reduced, options.Unplaced);
+        int groups = labels.Length == 0 ? 0 : labels.Max() + 1;
+
+        // Summaries from the raw rows rather than mapped back through the
+        // projection: exact, in the units that arrived, and they include whatever
+        // the dropped components carried.
+        var (centres, minimum, maximum) = Summaries(demands, labels, groups);
 
         return new SixDofClassificationResult(
-            selection, centres, pca.ExplainedVarianceRatio, pipeline.KeptColumns, d, columnNames);
+            selection, labels, groups, centres, minimum, maximum,
+            pca.ExplainedVarianceRatio, pipeline.KeptColumns, d, columnNames, options.Unplaced);
+    }
+
+    /// <summary>Mean, smallest and largest value of every column within every group.</summary>
+    private static (double[,] Centres, double[,] Minimum, double[,] Maximum) Summaries(double[,] data, int[] labels, int groups)
+    {
+        int d = data.GetLength(1);
+        var centres = ClusterLabels.Means(data, labels, groups);
+        var minimum = new double[groups, d];
+        var maximum = new double[groups, d];
+
+        for (int g = 0; g < groups; g++)
+            for (int j = 0; j < d; j++)
+                (minimum[g, j], maximum[g, j]) = (double.PositiveInfinity, double.NegativeInfinity);
+
+        for (int i = 0; i < labels.Length; i++)
+        {
+            int g = labels[i];
+            if (g < 0)
+                continue;
+
+            for (int j = 0; j < d; j++)
+            {
+                minimum[g, j] = Math.Min(minimum[g, j], data[i, j]);
+                maximum[g, j] = Math.Max(maximum[g, j], data[i, j]);
+            }
+        }
+
+        return (centres, minimum, maximum);
     }
 }

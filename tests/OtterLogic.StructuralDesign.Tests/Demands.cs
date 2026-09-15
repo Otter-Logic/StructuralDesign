@@ -14,19 +14,13 @@ internal static class Demands
     /// </summary>
     internal static double[,] Families(
         double spread, double outlierFraction, double[][] centres, int perFamily = 45)
-        => Families(spread, outlierFraction, centres, Enumerable.Repeat(perFamily, centres.Length).ToArray());
-
-    /// <summary>As above, with a different member count per family.</summary>
-    internal static double[,] Families(
-        double spread, double outlierFraction, double[][] centres, int[] perFamily)
     {
         var rng = new Random(Seed);
         var rows = new List<double[]>();
 
-        for (int f = 0; f < centres.Length; f++)
+        foreach (var centre in centres)
         {
-            var centre = centres[f];
-            for (int i = 0; i < perFamily[f]; i++)
+            for (int i = 0; i < perFamily; i++)
             {
                 var row = new double[centre.Length];
                 for (int j = 0; j < centre.Length; j++)
@@ -57,78 +51,6 @@ internal static class Demands
 
         return data;
     }
-
-    /// <summary>
-    /// Reactions for families of foundations under one load combination, as
-    /// <c>forces[dof][element]</c>. Each foundation's reactions scatter by a share
-    /// of their own size, the way real ones do, and keep their sign.
-    /// </summary>
-    internal static double[][] Reactions((double[] Centre, int Count)[] families, double scatter, int seed = Seed)
-    {
-        var rng = new Random(seed);
-        int n = families.Sum(family => family.Count);
-
-        var forces = new double[6][];
-        for (int j = 0; j < 6; j++)
-            forces[j] = new double[n];
-
-        int i = 0;
-        foreach (var (centre, count) in families)
-            for (int k = 0; k < count; k++, i++)
-                for (int j = 0; j < 6; j++)
-                    forces[j][i] = centre[j] * (1.0 + scatter * Gauss(rng));
-
-        return forces;
-    }
-
-    /// <summary>
-    /// Reactions for families of foundations under several load combinations, as
-    /// <c>forces[dof][element][combination]</c> — element-major, the way a
-    /// Grasshopper tree with a branch per node holds them. Combination c is each
-    /// foundation's gravity reactions plus <c>factors[c]</c> times its wind
-    /// reactions, so factors of 0, 1 and −1 are gravity alone and wind either way.
-    /// Each foundation's reactions scatter by a share of their own size and keep
-    /// their sign.
-    /// </summary>
-    internal static double[][][] Combinations(
-        (double[] Gravity, double[] Wind, int Count)[] families, double[] factors, double scatter, int seed = Seed)
-    {
-        var rng = new Random(seed);
-        int n = families.Sum(family => family.Count);
-
-        var forces = new double[6][][];
-        for (int j = 0; j < 6; j++)
-        {
-            forces[j] = new double[n][];
-            for (int i = 0; i < n; i++)
-                forces[j][i] = new double[factors.Length];
-        }
-
-        int element = 0;
-        foreach (var (gravity, wind, count) in families)
-        {
-            for (int k = 0; k < count; k++, element++)
-            {
-                for (int j = 0; j < 6; j++)
-                {
-                    double g = gravity[j] * (1.0 + scatter * Gauss(rng));
-                    double w = wind[j] * (1.0 + scatter * Gauss(rng));
-                    for (int c = 0; c < factors.Length; c++)
-                        forces[j][element][c] = g + factors[c] * w;
-                }
-            }
-        }
-
-        return forces;
-    }
-
-    /// <summary>Which family each element of <see cref="Combinations"/> was built from.</summary>
-    internal static int[] Truth((double[] Gravity, double[] Wind, int Count)[] families)
-        => families.SelectMany((family, f) => Enumerable.Repeat(f, family.Count)).ToArray();
-
-    /// <summary>Which family each element of <see cref="Reactions"/> was built from.</summary>
-    internal static int[] Truth((double[] Centre, int Count)[] families)
-        => families.SelectMany((family, f) => Enumerable.Repeat(f, family.Count)).ToArray();
 
     /// <summary>The rows split back into one list per degree of freedom.</summary>
     internal static double[][] Columns(double[,] data)

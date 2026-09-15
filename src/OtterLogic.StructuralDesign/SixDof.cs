@@ -13,11 +13,10 @@ namespace OtterLogic.StructuralDesign;
 /// answer.
 /// </para>
 /// <para>
-/// Two shapes are read. One value per element is one load combination. One list
-/// per element, holding a value per combination, is several — element-major,
-/// because that is how a Grasshopper tree with a branch per node already holds
-/// them, and it keeps each element's combinations together where its envelope is
-/// taken.
+/// One value per element, and nothing about which one. An envelope over load
+/// combinations, a sign dropped for a force designed either way, a governing
+/// combination picked out — each is a judgement about what the grouping is for,
+/// and the user makes it upstream, in their own definition, where it can be seen.
 /// </para>
 /// </summary>
 internal static class SixDof
@@ -25,14 +24,11 @@ internal static class SixDof
     /// <summary>The degrees of freedom, in the order they are passed and read.</summary>
     internal static readonly string[] Names = { "Fx", "Fy", "Fz", "Mx", "My", "Mz" };
 
-    /// <summary>Position of the axial force, the one degree of freedom whose sign a foundation cares about.</summary>
-    internal const int Fz = 2;
-
     /// <summary>
-    /// Reads the six inputs into <c>forces[dof][element]</c>, or says what is
-    /// wrong with them.
+    /// Reads the six inputs into an n x 6 array, one row per element, or says what
+    /// is wrong with them.
     /// </summary>
-    internal static double[][] Read(
+    internal static double[,] Read(
         IReadOnlyList<double> fx, IReadOnlyList<double> fy, IReadOnlyList<double> fz,
         IReadOnlyList<double> mx, IReadOnlyList<double> my, IReadOnlyList<double> mz)
     {
@@ -52,150 +48,20 @@ internal static class SixDof
                     "Every degree of freedom needs one value per element, in the same order, but "
                     + $"{Names[0]} has {n} and {Names[j]} has {inputs[j].Count}.");
 
-        var forces = new double[inputs.Length][];
+        var demands = new double[n, inputs.Length];
         for (int j = 0; j < inputs.Length; j++)
         {
-            forces[j] = new double[n];
             for (int i = 0; i < n; i++)
             {
                 double value = inputs[j][i];
                 if (!double.IsFinite(value))
                     throw new ArgumentException(
-                        $"{Names[j]} of element {i} is {value}. Grouping needs finite forces.");
+                        $"{Names[j]} of element {i} is {value}. Grouping needs finite values.");
 
-                forces[j][i] = value;
+                demands[i, j] = value;
             }
         }
 
-        return forces;
-    }
-
-    /// <summary>
-    /// Reads the six inputs, each one list per element holding a value per load
-    /// combination, into <c>forces[dof][element][combination]</c>, or says what is
-    /// wrong with them.
-    /// <para>
-    /// Every element needs the same number of combinations in every force, and
-    /// that is refused rather than enveloped over whatever is there: an element
-    /// with three Fz values and two Fx values would have its shear enveloped over
-    /// fewer combinations than its axial force, from values that never acted
-    /// together — or, if one list is short by a combination at the end, from the
-    /// wrong ones.
-    /// </para>
-    /// </summary>
-    internal static double[][][] ReadCombinations(
-        IReadOnlyList<IReadOnlyList<double>> fx, IReadOnlyList<IReadOnlyList<double>> fy,
-        IReadOnlyList<IReadOnlyList<double>> fz, IReadOnlyList<IReadOnlyList<double>> mx,
-        IReadOnlyList<IReadOnlyList<double>> my, IReadOnlyList<IReadOnlyList<double>> mz)
-    {
-        var inputs = new[] { fx, fy, fz, mx, my, mz };
-
-        for (int j = 0; j < inputs.Length; j++)
-            if (inputs[j] is null || inputs[j].Any(element => element is null))
-                throw new ArgumentNullException(Names[j].ToLowerInvariant(), $"{Names[j]} is missing.");
-
-        int n = inputs[0].Count;
-        for (int j = 1; j < inputs.Length; j++)
-            if (inputs[j].Count != n)
-                throw new ArgumentException(
-                    "Every degree of freedom needs one list per element, in the same order, but "
-                    + $"{Names[0]} has {n} and {Names[j]} has {inputs[j].Count}.");
-
-        if (n == 0)
-            throw new ArgumentException("Need at least one element.");
-
-        int combinations = inputs[0][0].Count;
-        if (combinations == 0)
-            throw new ArgumentException($"{Names[0]} of element 0 has no values; need at least one load combination.");
-
-        for (int j = 0; j < inputs.Length; j++)
-            for (int i = 0; i < n; i++)
-                if (inputs[j][i].Count != combinations)
-                    throw new ArgumentException(
-                        "Every element needs the same load combinations in every degree of freedom, but "
-                        + $"{Names[0]} of element 0 has {combinations} and {Names[j]} of element {i} has "
-                        + $"{inputs[j][i].Count}.");
-
-        var forces = new double[inputs.Length][][];
-        for (int j = 0; j < inputs.Length; j++)
-        {
-            forces[j] = new double[n][];
-            for (int i = 0; i < n; i++)
-            {
-                forces[j][i] = new double[combinations];
-                for (int c = 0; c < combinations; c++)
-                {
-                    double value = inputs[j][i][c];
-                    if (!double.IsFinite(value))
-                        throw new ArgumentException(
-                            $"{Names[j]} of element {i} in combination {c} is {value}. Grouping needs finite forces.");
-
-                    forces[j][i][c] = value;
-                }
-            }
-        }
-
-        return forces;
-    }
-
-    /// <summary>One value per element, read as a single combination: <c>forces[dof][element][0]</c>.</summary>
-    internal static double[][][] AsOneCombination(double[][] forces)
-        => forces.Select(force => force.Select(value => new[] { value }).ToArray()).ToArray();
-
-    /// <summary>
-    /// Each element's largest size under any combination — the envelope of a
-    /// force designed to act either way, where only how big it gets matters.
-    /// </summary>
-    internal static double[] LargestSize(double[][] force)
-        => force.Select(values => values.Max(Math.Abs)).ToArray();
-
-    /// <summary>Each element's largest value under any combination, with its sign.</summary>
-    internal static double[] Largest(double[][] force) => force.Select(values => values.Max()).ToArray();
-
-    /// <summary>Each element's smallest value under any combination, with its sign.</summary>
-    internal static double[] Smallest(double[][] force) => force.Select(values => values.Min()).ToArray();
-
-    /// <summary>What each column of <see cref="Envelope"/> is, in order.</summary>
-    internal static readonly string[] EnvelopeNames = { "Fx Max", "Fx Min", "Fy", "Fz", "Mx", "My", "Mz" };
-
-    /// <summary>
-    /// Each element's envelope of a member's forces, seven columns: the axial force
-    /// Fx as its largest and smallest value with their signs, and the other five by
-    /// size.
-    /// <para>
-    /// The axial force is the one whose direction changes what a member is — a tie
-    /// or a strut — so it keeps both ends of its range. Shear, torsion and bending
-    /// are the same demand either way round, and taken by size the two ends of a
-    /// member, equal and opposite, read as one. Shared by every tool that reads a
-    /// member end, so the reduction is written once.
-    /// </para>
-    /// </summary>
-    internal static double[][] Envelope(double[][][] forces) => new[]
-    {
-        Largest(forces[0]),
-        Smallest(forces[0]),
-        LargestSize(forces[1]),
-        LargestSize(forces[2]),
-        LargestSize(forces[3]),
-        LargestSize(forces[4]),
-        LargestSize(forces[5]),
-    };
-
-    /// <summary>Every force as it came, with its sign: six columns, one per degree of freedom.</summary>
-    internal static (double[,] Features, string[] Names) Signed(double[][] forces)
-        => Features(
-            forces.Select((force, j) => (Names[j], (Func<int, double>)(i => force[i]))).ToList(),
-            forces[0].Length);
-
-    /// <summary>Evaluates each named column for every element into an n x d array.</summary>
-    internal static (double[,] Features, string[] Names) Features(
-        IReadOnlyList<(string Name, Func<int, double> Value)> columns, int n)
-    {
-        var features = new double[n, columns.Count];
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < columns.Count; j++)
-                features[i, j] = columns[j].Value(i);
-
-        return (features, columns.Select(column => column.Name).ToArray());
+        return demands;
     }
 }

@@ -182,6 +182,104 @@ public class SixDofBehaviourClassifierTests
         Assert.Contains("at least four members", error.Message);
     }
 
+    [Fact]
+    public void SixNamedLists_GiveTheSameAnswerAsTheMatrix()
+    {
+        var data = Families(spread: 0.6, outlierFraction: 0.0, centres: CleanCentres);
+        var c = Demands.Columns(data);
+
+        var fromLists = SixDofBehaviourClassifier.Classify(c[0], c[1], c[2], c[3], c[4], c[5]);
+        var fromMatrix = SixDofBehaviourClassifier.Classify(data);
+
+        Assert.Equal(fromMatrix.Labels, fromLists.Labels);
+        Assert.Equal(new[] { "Fx", "Fy", "Fz", "Mx", "My", "Mz" }, fromLists.ColumnNames);
+        Assert.Null(fromMatrix.ColumnNames);
+    }
+
+    [Fact]
+    public void ListsOfDifferentLengths_FailWithSomethingReadable()
+    {
+        var six = Enumerable.Repeat(1.0, 6).ToArray();
+        var five = Enumerable.Repeat(1.0, 5).ToArray();
+
+        var error = Assert.Throws<ArgumentException>(() => SixDofBehaviourClassifier.Classify(six, six, five, six, six, six));
+        Assert.Contains("Fz has 5", error.Message);
+    }
+
+    /// <summary>
+    /// Every unassigned element gets a group of its own after the groups the model
+    /// found, and nothing else moves.
+    /// </summary>
+    [Fact]
+    public void OwnGroup_GivesEveryUnassignedElementItsOwnGroupAtTheEnd()
+    {
+        var data = Families(spread: 1.2, outlierFraction: 0.18, centres: OutlierCentres);
+
+        var left = SixDofBehaviourClassifier.Classify(data);
+        var own = SixDofBehaviourClassifier.Classify(data, new SixDofClassificationOptions { Unplaced = UnplacedPolicy.OwnGroup });
+
+        var unassigned = left.Unassigned();
+        Assert.NotEmpty(unassigned);
+        Assert.Equal(left.Groups + unassigned.Length, own.Groups);
+        Assert.All(own.Labels, label => Assert.True(label >= 0));
+        Assert.All(unassigned, i => Assert.Single(own.Members()[own.Labels[i]]));
+        for (int i = 0; i < data.GetLength(0); i++)
+            if (left.Labels[i] >= 0)
+                Assert.Equal(left.Labels[i], own.Labels[i]);
+    }
+
+    [Fact]
+    public void Nearest_PlacesEveryElementInAnExistingGroup()
+    {
+        var data = Families(spread: 1.2, outlierFraction: 0.18, centres: OutlierCentres);
+
+        var left = SixDofBehaviourClassifier.Classify(data);
+        var nearest = SixDofBehaviourClassifier.Classify(data, new SixDofClassificationOptions { Unplaced = UnplacedPolicy.Nearest });
+
+        Assert.Equal(left.Groups, nearest.Groups);
+        Assert.All(nearest.Labels, label => Assert.InRange(label, 0, left.Groups - 1));
+    }
+
+    /// <summary>Every element sits inside its own group's envelope, in every column.</summary>
+    [Fact]
+    public void EveryElementLiesWithinItsGroupsRange()
+    {
+        var data = Families(spread: 4.0, outlierFraction: 0.0, centres: CleanCentres);
+        var result = SixDofBehaviourClassifier.Classify(data);
+
+        for (int i = 0; i < data.GetLength(0); i++)
+        {
+            int g = result.Labels[i];
+            for (int j = 0; j < 6; j++)
+                Assert.InRange(data[i, j], result.Minimum[g, j], result.Maximum[g, j]);
+        }
+    }
+
+    [Fact]
+    public void CleanFamilies_AllThreeModelsAgree()
+    {
+        var data = Families(spread: 0.6, outlierFraction: 0.0, centres: CleanCentres);
+        var result = SixDofBehaviourClassifier.Classify(data);
+
+        Assert.True(result.ModelAgreement > 0.9, $"agreement was {result.ModelAgreement:0.00}");
+        Assert.Contains("Agreement", result.Report());
+    }
+
+    private static readonly double[][] CleanCentres =
+    {
+        new[] { 400.0, 20, 15, 8, 90, 10 },
+        new[] { 60.0, 140, 20, 95, 12, 8 },
+        new[] { 30.0, 25, 180, 10, 15, 85 },
+        new[] { 500.0, 200, 30, 100, 110, 20 },
+    };
+
+    private static readonly double[][] OutlierCentres =
+    {
+        new[] { 400.0, 20, 15, 8, 90, 10 },
+        new[] { 60.0, 140, 20, 95, 12, 8 },
+        new[] { 30.0, 25, 180, 10, 15, 85 },
+    };
+
     private static double[,] Families(
         double spread, double outlierFraction, double[][] centres, int perFamily = 45)
         => Demands.Families(spread, outlierFraction, centres, perFamily);
