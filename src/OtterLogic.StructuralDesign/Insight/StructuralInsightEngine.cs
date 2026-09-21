@@ -1,5 +1,5 @@
 using System.Globalization;
-using OtterLogic.MachineLearning.Graphs;
+using OtterLogic.Graphs;
 using OtterLogic.Unsupervised.Clustering;
 
 namespace OtterLogic.StructuralDesign;
@@ -203,7 +203,7 @@ public static class StructuralInsightEngine
             return distance;
         }
 
-        var routes = ShortestPaths.From(structure.Routes, sources);
+        var routes = Dijkstra.From(structure.Routes, sources);
         for (int e = 0; e < n; e++)
             distance[e] = structure.ElementJoints[e].Select(j => routes.Cost[j]).DefaultIfEmpty(double.PositiveInfinity).Min();
 

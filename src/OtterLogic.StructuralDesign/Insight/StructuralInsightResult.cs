@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 using OtterLogic.Core;
-using OtterLogic.MachineLearning.Graphs;
+using OtterLogic.Graphs;
 using OtterLogic.Unsupervised.Clustering;
 
 namespace OtterLogic.StructuralDesign;

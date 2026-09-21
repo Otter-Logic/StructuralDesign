@@ -1,4 +1,4 @@
-using OtterLogic.MachineLearning.Graphs;
+using OtterLogic.Graphs;
 using OtterLogic.Unsupervised.Clustering;
 
 namespace OtterLogic.StructuralDesign;

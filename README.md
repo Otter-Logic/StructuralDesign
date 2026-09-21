@@ -139,7 +139,7 @@ On a regular frame of 1,705 members the whole engine runs in about two seconds.
 | | Lives in | Because |
 |---|---|---|
 | Fit three models and choose; fuse several clusterings; three views over a graph and features | Unsupervised | about the shape of a point cloud and a graph, true of any samples |
-| Betweenness, cut vertices, shortest routes | MachineLearning | readings of a graph every paradigm can use |
+| Betweenness, cut vertices, shortest routes | Graphs | readings of a graph anything can use, learning or not |
 | Six columns beside each other, three components, no log; welding a stick model, which features describe an element, which view reads which | StructuralDesign | claims about structural data |
 
 ## Layout
