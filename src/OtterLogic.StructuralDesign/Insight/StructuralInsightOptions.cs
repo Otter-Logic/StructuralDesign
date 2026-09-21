@@ -36,14 +36,14 @@ public sealed record StructuralInsightOptions
     public int MinimumGroupSize { get; init; } = 1;
 
     /// <summary>
-    /// Vote of the connectivity view: spectral clustering of the element graph,
-    /// cutting where connected elements stop being alike. Zero skips it.
+    /// Vote of the connectivity view: spectral clustering of the member graph,
+    /// cutting where connected members stop being alike. Zero skips it.
     /// </summary>
     public double ConnectivityWeight { get; init; } = 1.0;
 
     /// <summary>
-    /// Vote of the geometry view: hierarchical clustering of what each element is
-    /// like, wherever it is — so repeated elements group across the model. Zero
+    /// Vote of the geometry view: hierarchical clustering of what each member is
+    /// like, wherever it is — so repeated members group across the model. Zero
     /// skips it.
     /// </summary>
     public double GeometryWeight { get; init; } = 1.0;
@@ -53,6 +53,25 @@ public sealed record StructuralInsightOptions
     /// QA findings. Zero skips it, and with it the outlier flags.
     /// </summary>
     public double DensityWeight { get; init; } = 1.0;
+
+    /// <summary>
+    /// Vote of the role view: hierarchical clustering of what each member is like
+    /// <em>and what it is attached to</em>, out to <see cref="RoleHops"/> members away —
+    /// so members playing the same part group wherever they are, a chord with every
+    /// other chord because each has webs on one side and purlins on the other. Zero
+    /// skips it.
+    /// </summary>
+    public double RoleWeight { get; init; } = 1.0;
+
+    /// <summary>How many members away the role view looks when it reads what a member is attached to.</summary>
+    public int RoleHops { get; init; } = 2;
+
+    /// <summary>
+    /// Read every line as its own member instead of chaining lines that carry straight
+    /// on into one. Off by default; worth switching on when a model was drawn with
+    /// deliberate breaks that ought to stay breaks.
+    /// </summary>
+    public bool ElementsAsMembers { get; init; }
 
     /// <summary>
     /// Scale each view's vote by how far the other views agree with it. On by default.
@@ -99,6 +118,11 @@ public sealed record StructuralInsightOptions
         if (!double.IsFinite(LowAgreement) || LowAgreement < 0.0 || LowAgreement > 1.0)
             throw new ArgumentOutOfRangeException(nameof(LowAgreement), LowAgreement, "Must be between 0 and 1.");
 
+        if (!double.IsFinite(RoleWeight) || RoleWeight < 0.0)
+            throw new ArgumentOutOfRangeException(nameof(RoleWeight), RoleWeight, "A view's weight must be finite and not negative.");
+        if (RoleHops < 1)
+            throw new ArgumentOutOfRangeException(nameof(RoleHops), RoleHops, "The role view needs to look at least one member away.");
+
         ToClustering().Validate(elementCount);
     }
 
@@ -110,6 +134,8 @@ public sealed record StructuralInsightOptions
         SpectralWeight = ConnectivityWeight,
         HierarchicalWeight = GeometryWeight,
         DensityWeight = DensityWeight,
+        ProfileWeight = RoleWeight,
+        ProfileHops = RoleHops,
         Seed = Seed,
         Consensus = new ConsensusOptions
         {

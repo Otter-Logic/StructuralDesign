@@ -76,6 +76,10 @@ public sealed record InsightIssue(int Element, InsightFlag Flag, double X, doubl
 /// same kind of element recurring apart — a repeated module.
 /// </param>
 /// <param name="MeanAgreement">Mean agreement between the clustering views about its elements, 0 to 1.</param>
+/// <param name="Members">Physical members the group holds — runs of elements that carry straight on, read as one.</param>
+/// <param name="MeanMemberLength">Mean length of those members, in model units.</param>
+/// <param name="MeanLevel">Mean hand-overs between its elements and the ground; NaN when no load path was traced.</param>
+/// <param name="MeanFlow">Mean share of the model's weight passing along its elements, 0 to 1.</param>
 public sealed record InsightGroup(
     int Index,
     int[] Elements,
@@ -89,4 +93,8 @@ public sealed record InsightGroup(
     double MeanSupportDistance,
     double MeanCentrality,
     int Pieces,
-    double MeanAgreement);
+    double MeanAgreement,
+    int Members,
+    double MeanMemberLength,
+    double MeanLevel,
+    double MeanFlow);

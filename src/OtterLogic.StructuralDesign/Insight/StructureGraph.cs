@@ -80,6 +80,28 @@ internal sealed class StructureGraph
 
     public bool IsSurface(int element) => element >= LineCount;
 
+    /// <summary>
+    /// Every stretch of every element between consecutive joints along it: a line's
+    /// pieces between the joints resting on it, a surface's boundary edge by edge.
+    /// The same stretches <see cref="Routes"/> is built from, but with the element
+    /// each belongs to, so what passes along one can be credited to its owner.
+    /// </summary>
+    public IEnumerable<(int Element, int A, int B)> Segments()
+    {
+        for (int e = 0; e < Outline.Length; e++)
+        {
+            var path = Outline[e];
+            int count = IsSurface(e) ? path.Length : path.Length - 1;
+            for (int p = 0; p < count; p++)
+            {
+                int a = path[p];
+                int b = path[(p + 1) % path.Length];
+                if (a != b)
+                    yield return (e, a, b);
+            }
+        }
+    }
+
     public static StructureGraph Build(
         double[,] starts, double[,] ends, IReadOnlyList<double[,]> surfaces, double[,]? supports, double join)
     {

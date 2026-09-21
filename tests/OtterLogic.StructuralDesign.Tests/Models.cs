@@ -60,6 +60,33 @@ internal sealed class Models
         return this;
     }
 
+    /// <summary>The same model turned about the vertical through the origin — lines and supports, in the same order.</summary>
+    public Models TurnedAboutVertical(double degrees)
+    {
+        double angle = degrees * Math.PI / 180.0;
+        double[] Turn(double[] p) => new[]
+        {
+            p[0] * Math.Cos(angle) - p[1] * Math.Sin(angle),
+            p[0] * Math.Sin(angle) + p[1] * Math.Cos(angle),
+            p[2],
+        };
+
+        var turned = new Models();
+        for (int i = 0; i < _starts.Count; i++)
+        {
+            var (a, b) = (Turn(_starts[i]), Turn(_ends[i]));
+            turned.Line(a[0], a[1], a[2], b[0], b[1], b[2]);
+        }
+
+        foreach (var support in _supports)
+        {
+            var p = Turn(support);
+            turned.Support(p[0], p[1], p[2]);
+        }
+
+        return turned;
+    }
+
     public StructuralInsightResult Analyse(StructuralInsightOptions? options = null)
         => StructuralInsightEngine.Analyse(Rows(_starts), Rows(_ends), _surfaces, _supports.Count > 0 ? Rows(_supports) : null, options);
 

@@ -12,7 +12,9 @@ namespace OtterLogic.StructuralDesign;
 /// everything worth a look.
 /// <para>
 /// Elements are numbered lines first, then surfaces, in the order given — every
-/// per-element array here uses that numbering.
+/// per-element array here uses that numbering. The clustering itself runs on physical
+/// members, and everything it found is handed back per element: every element of a
+/// member shares its member's group, agreement and level.
 /// </para>
 /// </summary>
 public sealed class StructuralInsightResult
@@ -33,29 +35,74 @@ public sealed class StructuralInsightResult
     /// <summary>Number of elements.</summary>
     public int ElementCount => LineCount + SurfaceCount;
 
-    /// <summary>Every clustering view, and their consensus.</summary>
+    /// <summary>
+    /// Every clustering view, and their consensus — over the physical members, one
+    /// sample each; <see cref="Member"/> says which sample an element is part of.
+    /// </summary>
     public MultiViewClusteringResult Clustering { get; internal init; } = null!;
 
+    /// <summary>
+    /// The physical member each element is part of: lines that carry straight on
+    /// through their joints are one member, however many pieces they were drawn in.
+    /// Numbered by their lowest element.
+    /// </summary>
+    public int[] Member { get; internal init; } = null!;
+
+    /// <summary>Number of physical members.</summary>
+    public int MemberCount { get; internal init; }
+
+    /// <summary>The turn, in degrees, up to which a line was read as carrying on into the next. NaN when nothing was chained.</summary>
+    public double TurnLimit { get; internal init; }
+
+    /// <summary>
+    /// The assembly each element is part of: members triangulated together in one
+    /// plane — a truss, a braced bay — are one assembly, and any other member is an
+    /// assembly by itself. Numbered by their lowest member.
+    /// </summary>
+    public int[] Assembly { get; internal init; } = null!;
+
+    /// <summary>Number of assemblies, those of a single member included.</summary>
+    public int AssemblyCount { get; internal init; }
+
+    /// <summary>Assemblies of more than one member.</summary>
+    public int TriangulatedAssemblies { get; internal init; }
+
+    /// <summary>
+    /// Per element, how many hand-overs stand between its assembly and the ground: 0
+    /// rests on the supports, 1 rests on something that does, and so on up. Assemblies
+    /// that lean on each other share a level. -1 without supports, or with no route to one.
+    /// </summary>
+    public int[] Level { get; internal init; } = null!;
+
+    /// <summary>The highest level found; -1 when no load path was traced.</summary>
+    public int Levels { get; internal init; }
+
+    /// <summary>Per element, the share of the whole model's weight passing along it on its way to the supports, 0 to 1.</summary>
+    public double[] Flow { get; internal init; } = null!;
+
     /// <summary>Natural group per element, largest group first. Every element is placed.</summary>
-    public int[] Labels => Clustering.Labels;
+    public int[] Labels { get; internal init; } = null!;
 
     /// <summary>Number of natural groups.</summary>
     public int Groups => Clustering.Groups;
 
-    /// <summary>Per element, how far the views agreed about the elements it belongs with, 0 to 1.</summary>
-    public double[] Agreement => Clustering.Agreement;
+    /// <summary>Per element, how far the views agreed about the members its own belongs with, 0 to 1.</summary>
+    public double[] Agreement { get; internal init; } = null!;
 
     /// <summary>Each natural group, described by what was measured.</summary>
     public IReadOnlyList<InsightGroup> GroupSummaries { get; internal init; } = null!;
 
     /// <summary>Per element, its connectivity-view group, or -1 where the view skipped it or did not run.</summary>
-    public int[] ConnectivityLabels => Clustering.Spectral?.Labels ?? Unplaced();
+    public int[] ConnectivityLabels => PerElement(Clustering.Spectral?.Labels);
 
     /// <summary>Per element, its geometry-view group, or -1 when the view did not run.</summary>
-    public int[] GeometryLabels => Clustering.HierarchicalLabels ?? Unplaced();
+    public int[] GeometryLabels => PerElement(Clustering.HierarchicalLabels);
 
     /// <summary>Per element, its density-view group, or -1 for an outlier or when the view did not run.</summary>
-    public int[] DensityLabels => Clustering.Density?.Labels ?? Unplaced();
+    public int[] DensityLabels => PerElement(Clustering.Density?.Labels);
+
+    /// <summary>Per element, its role-view group, or -1 when the view did not run.</summary>
+    public int[] RoleLabels => PerElement(Clustering.ProfileLabels);
 
     /// <summary>
     /// The raw features, one row per element, in model units — see <see cref="FeatureNames"/>.
@@ -106,7 +153,21 @@ public sealed class StructuralInsightResult
     public IReadOnlyList<string> Notes { get; internal init; } = null!;
 
     /// <summary>Element indices bucketed by natural group.</summary>
-    public int[][] Members() => Clustering.Consensus.Members();
+    public int[][] Members() => Enumerable.Range(0, Groups)
+        .Select(g => Enumerable.Range(0, ElementCount).Where(e => Labels[e] == g).ToArray())
+        .ToArray();
+
+    /// <summary>
+    /// The model as an engineer would schedule it: element indices bucketed by level,
+    /// then by natural group within the level — what rests on the supports sorted into
+    /// its kinds, then what rests on that, and so on up. Only the pairs that occur,
+    /// level ascending and group ascending within it; level -1 first when there is one.
+    /// </summary>
+    public IReadOnlyList<(int Level, int Group, int[] Elements)> Hierarchy() => Enumerable.Range(0, ElementCount)
+        .GroupBy(e => (Level: Level[e], Group: Labels[e]))
+        .OrderBy(g => g.Key.Level).ThenBy(g => g.Key.Group)
+        .Select(g => (g.Key.Level, g.Key.Group, g.ToArray()))
+        .ToList();
 
     /// <summary>What was read, how the views voted, what each group is like, and what is worth a look.</summary>
     public string Report()
@@ -121,6 +182,12 @@ public sealed class StructuralInsightResult
             ? $"Supports     {SupportedJoints} joint(s) supported"
               + (StrandedSupports.Length > 0 ? $", {StrandedSupports.Length} support(s) at no joint" : string.Empty)
             : "Supports     none given");
+        text.AppendLine($"Members      {MemberCount} physical member(s)"
+            + (double.IsNaN(TurnLimit) ? string.Empty : $", lines turning up to {G(TurnLimit)} degrees read as carrying on"));
+        text.AppendLine($"Assemblies   {TriangulatedAssemblies} triangulated together, {AssemblyCount - TriangulatedAssemblies} member(s) standing alone");
+        text.AppendLine(Levels >= 0
+            ? $"Load path    {Levels + 1} level(s), level 0 resting on the supports"
+            : "Load path    not traced");
         text.AppendLine($"Connected    {ComponentCount} piece(s)"
             + (double.IsNaN(AlgebraicConnectivity) ? string.Empty : $", algebraic connectivity {G(AlgebraicConnectivity)}"));
         text.AppendLine();
@@ -135,6 +202,9 @@ public sealed class StructuralInsightResult
         text.AppendLine(Clustering.Density is null
             ? "Density      skipped"
             : $"Density      {Clustering.Density.ClusterCount} dense groups, {Clustering.Density.NoiseCount} outlier(s)");
+        text.AppendLine(Clustering.ProfileLabels is null
+            ? "Role         skipped"
+            : $"Role         {Clustering.ProfileLabels.Max() + 1} groups");
 
         var consensus = Clustering.Consensus;
         text.AppendLine($"Consensus    {Groups} natural groups"
@@ -146,14 +216,22 @@ public sealed class StructuralInsightResult
             + " (each view against the consensus, 1 is identical)");
         text.AppendLine();
 
-        text.AppendLine("Group  Elements  Lines  Surfaces  Mean size  Extent x/y/z    Connections  To support  Pieces  Agreement");
+        text.AppendLine("Group  Elements  Members  Lines  Surfaces  Member length  Extent x/y/z    Level  Flow    To support  Pieces  Agreement");
         foreach (var group in GroupSummaries)
         {
             string extent = $"{group.MeanExtentX:0.00}/{group.MeanExtentY:0.00}/{group.MeanExtentZ:0.00}";
             text.AppendLine(
-                $"{group.Index,5}  {group.Elements.Length,8}  {group.Lines,5}  {group.Surfaces,8}  {G(group.MeanSize),9}  "
-                + $"{extent,-14}  {G(group.MeanConnections),11}  {G(group.MeanSupportDistance),10}  {group.Pieces,6}  "
-                + $"{group.MeanAgreement.ToString("0.00", inv),9}");
+                $"{group.Index,5}  {group.Elements.Length,8}  {group.Members,7}  {group.Lines,5}  {group.Surfaces,8}  "
+                + $"{G(group.MeanMemberLength),13}  {extent,-14}  {G(group.MeanLevel),5}  {G(group.MeanFlow),-6}  "
+                + $"{G(group.MeanSupportDistance),10}  {group.Pieces,6}  {group.MeanAgreement.ToString("0.00", inv),9}");
+        }
+
+        if (Levels >= 0)
+        {
+            text.AppendLine();
+            text.AppendLine("Level  Group  Elements");
+            foreach (var (level, group, elements) in Hierarchy())
+                text.AppendLine($"{level,5}  {group,5}  {elements.Length,8}");
         }
 
         text.AppendLine();
@@ -170,5 +248,7 @@ public sealed class StructuralInsightResult
         return text.ToString().TrimEnd();
     }
 
-    private int[] Unplaced() => Enumerable.Repeat(-1, ElementCount).ToArray();
+    /// <summary>A labelling of the members, handed out to their elements; -1 throughout when there is none.</summary>
+    private int[] PerElement(int[]? perMember)
+        => Member.Select(m => perMember is null ? -1 : perMember[m]).ToArray();
 }
