@@ -1,53 +1,19 @@
 namespace OtterLogic.StructuralDesign;
 
-/// <summary>How a line stands, named from the prototypes in <see cref="GridNaming"/>.</summary>
-public enum LineOrientation
-{
-    /// <summary>Lies level — a beam, a joist, a tie.</summary>
-    Level,
-
-    /// <summary>Half-way between — a brace, a rafter, a raking member.</summary>
-    Pitched,
-
-    /// <summary>Stands up — a column, a post, a hanger.</summary>
-    Plumb,
-
-    /// <summary>No length at the document's tolerance, so no direction to read.</summary>
-    Degenerate,
-}
-
 /// <summary>
 /// The only hard-coded engineering in grid and level inference: what things are
 /// called. Everything that measures — which heights are levels, which directions
 /// the grid runs, where each gridline sits, what is off it — is read from the
 /// model's own population by <see cref="OtterLogic.Unsupervised.Clustering.ValueBands"/>.
 /// <para>
-/// Kept in one file so an office with other conventions changes one file. The
-/// orientation prototypes match Structural-Analysis's <c>Vocabulary</c>; the two
-/// cannot share a copy while neither domain may reference the other, and both
-/// belong in Core once a third needs them.
+/// Kept in one file so an office with other conventions changes one file. How a
+/// line stands — level, pitched, plumb — is not a convention but a reading of the
+/// model, and it moved down to <see cref="OtterLogic.StructuralEngine.LineOrientations"/>
+/// the day a third toolkit needed it.
 /// </para>
 /// </summary>
 public static class GridNaming
 {
-    /// <summary>
-    /// Orientation prototypes, as the sine of a line's inclination: level lies at
-    /// 0, plumb stands at 1, pitched sits at 45 degrees between. A band of lines is
-    /// named by the prototype nearest its median, so a roof whose beams all sit at a
-    /// few degrees reads as level, and a leaning column as plumb — prototypes, not
-    /// cut-offs.
-    /// </summary>
-    public static readonly (LineOrientation Orientation, double Sine)[] Prototypes =
-    {
-        (LineOrientation.Level, 0.0),
-        (LineOrientation.Pitched, Math.Sqrt(0.5)),
-        (LineOrientation.Plumb, 1.0),
-    };
-
-    /// <summary>The prototype nearest a line's inclination sine.</summary>
-    public static LineOrientation Nearest(double sine)
-        => Prototypes.OrderBy(p => Math.Abs(p.Sine - sine)).First().Orientation;
-
     /// <summary>Levels by height, lowest first: Level 00, Level 01, ...</summary>
     public static string Level(int index) => $"Level {index:00}";
 

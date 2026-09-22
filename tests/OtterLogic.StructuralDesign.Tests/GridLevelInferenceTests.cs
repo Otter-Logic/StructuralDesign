@@ -1,4 +1,5 @@
 using Xunit;
+using OtterLogic.StructuralEngine;
 
 namespace OtterLogic.StructuralDesign.Tests;
 
@@ -222,8 +223,8 @@ public class GridLevelInferenceTests
     [Fact]
     public void ALeaningColumnIsStillPlumb()
     {
-        Assert.Equal(LineOrientation.Plumb, GridNaming.Nearest(Math.Sin(80 * Math.PI / 180)));
-        Assert.Equal(LineOrientation.Level, GridNaming.Nearest(Math.Sin(5 * Math.PI / 180)));
-        Assert.Equal(LineOrientation.Pitched, GridNaming.Nearest(Math.Sin(35 * Math.PI / 180)));
+        Assert.Equal(LineOrientation.Plumb, LineOrientations.Nearest(Math.Sin(80 * Math.PI / 180)));
+        Assert.Equal(LineOrientation.Level, LineOrientations.Nearest(Math.Sin(5 * Math.PI / 180)));
+        Assert.Equal(LineOrientation.Pitched, LineOrientations.Nearest(Math.Sin(35 * Math.PI / 180)));
     }
 }

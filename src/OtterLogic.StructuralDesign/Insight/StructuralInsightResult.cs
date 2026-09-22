@@ -3,6 +3,7 @@ using System.Text;
 using OtterLogic.Core;
 using OtterLogic.Graphs;
 using OtterLogic.Unsupervised.Clustering;
+using OtterLogic.StructuralEngine;
 
 namespace OtterLogic.StructuralDesign;
 

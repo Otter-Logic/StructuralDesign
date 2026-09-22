@@ -1,4 +1,5 @@
 using OtterLogic.Unsupervised.Clustering;
+using OtterLogic.StructuralEngine;
 
 namespace OtterLogic.StructuralDesign;
 

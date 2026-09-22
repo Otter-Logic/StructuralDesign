@@ -8,10 +8,18 @@ A domain toolkit, sibling to
 a structure; this one answers questions about a structure that already exists.
 
 ```
-Core  ->  MachineLearning  ->  Unsupervised  ->  StructuralDesign
-          (features, PCA,      (the methods,     (this repo: what
-           graphs)              and fusion)       structural data is)
+Core  ->  MachineLearning  ->  Unsupervised  ->  StructuralEngine  ->  StructuralDesign
+          (features, PCA,      (the methods,     (reading a model:     (this repo: what
+           graphs)              and fusion)       joints, members,      structural data
+                                                  assemblies, loads)    means)
 ```
+
+How a model is read — points welded into joints, lines chained into members,
+members triangulated into assemblies, weight drained to the supports — lives one
+layer down in [StructuralEngine](https://github.com/Otter-Logic/StructuralEngine),
+because [Construction](https://github.com/Otter-Logic/Construction) and
+[Fabrication](https://github.com/Otter-Logic/Fabrication) read the model the same
+way. This repo holds what the reading *means* to a structural engineer.
 
 ## The rule these tools follow
 
@@ -62,12 +70,12 @@ parametric forms go through the same stages:
 
 | Stage | How | |
 |---|---|---|
-| Input | lines as end points, surfaces as boundary corners, supports as points; refused with a reason, never repaired | `StructuralInsightEngine` |
-| Graph construction | points within the join distance weld into joints; a joint resting along an element joins it; elements become a graph joined where they meet, joints a graph joined along elements | `StructureGraph` |
-| Members | lines that carry straight on through a joint are chained into one member, straightest pair first; how much of a turn still counts is learned from the model's own turns, between 5 and 30 degrees | `PhysicalMembers` |
-| Assemblies | triangles sharing a side in one plane are one body — a truss, a braced bay; a member in two planes goes to the more upright; each body gets its own span and depth | `Assemblies` |
-| Load paths | every element's weight drained to the supports as a potential flow, bending a hundred times softer than axial; hand-overs read joint by joint, summed between assemblies, loops folded, levels counted up from the ground | `LoadPaths`, `MachineLearning.PotentialFlow`, `MachineLearning.Condensation` |
-| Features | per member: length, uprightness, straightness, what frames into it and what it frames into, flow, level, place in its assembly's depth and span — nothing that refers to x, y or position in plan | `ElementGeometry`, `InsightFeatures` |
+| Input | lines as end points, surfaces as boundary corners, supports as points; refused with a reason, never repaired | `StructuralEngine.ModelInput` |
+| Graph construction | points within the join distance weld into joints; a joint resting along an element joins it; elements become a graph joined where they meet, joints a graph joined along elements | `StructuralEngine.StructureGraph` |
+| Members | lines that carry straight on through a joint are chained into one member, straightest pair first; how much of a turn still counts is learned from the model's own turns, between 5 and 30 degrees | `StructuralEngine.PhysicalMembers` |
+| Assemblies | triangles sharing a side in one plane are one body — a truss, a braced bay; a member in two planes goes to the more upright; each body gets its own span and depth | `StructuralEngine.Assemblies` |
+| Load paths | every element's weight drained to the supports as a potential flow, bending a hundred times softer than axial; hand-overs read joint by joint, summed between assemblies, loops folded, levels counted up from the ground | `StructuralEngine.LoadPaths`, `Graphs.PotentialFlow`, `Graphs.Condensation` |
+| Features | per member: length, uprightness, straightness, what frames into it and what it frames into, flow, level, place in its assembly's depth and span — nothing that refers to x, y or position in plan | `StructuralEngine.ElementGeometry`, `InsightFeatures` |
 | Unsupervised learning | four views of the members: spectral clustering of the member graph (connectivity), hierarchical clustering of what members are like wherever they are (geometry), the same over what each is like *and attached to* (role), HDBSCAN over everything (QA) | `Unsupervised.MultiViewClustering`, `Unsupervised.NeighbourhoodProfile` |
 | Fusion | co-association between every pair of members, views weighted by agreement, the count the views support over the widest range of thresholds | `Unsupervised.ConsensusClustering` |
 | Output | natural groups described by what was measured, the level of every element and the groups sorted within levels, each element's member, assembly, flow and agreement, every view's grouping, the features and graph, and QA flags | `StructuralInsightResult` |
@@ -140,15 +148,21 @@ On a regular frame of 1,705 members the whole engine runs in about two seconds.
 |---|---|---|
 | Fit three models and choose; fuse several clusterings; three views over a graph and features | Unsupervised | about the shape of a point cloud and a graph, true of any samples |
 | Betweenness, cut vertices, shortest routes | Graphs | readings of a graph anything can use, learning or not |
-| Six columns beside each other, three components, no log; welding a stick model, which features describe an element, which view reads which | StructuralDesign | claims about structural data |
+| Welding a stick model, chaining members, finding bodies, draining weight to the ground | StructuralEngine | true of any structure, and needed by every structural toolkit |
+| Six columns beside each other, three components, no log; which features describe an element, which view reads which | StructuralDesign | claims about what structural data means |
 
 ## Layout
 
 ```
 src/OtterLogic.StructuralDesign/   the library, published as a NuGet package
   Insight/                         the Structural Insight Engine
+  Grids/                           grid and level inference
+  QA/                              geometry QA
 tests/                             xunit; runs anywhere, no Rhino needed
 ```
+
+Joint Signature and Connection Typology, which once lived here for want of a
+shared reading, now live in Fabrication; the erection sequence in Construction.
 
 Nothing here touches a Rhino or Grasshopper API. The components live in
 [Rhino3D](https://github.com/Otter-Logic/Rhino3D), under the **Structural

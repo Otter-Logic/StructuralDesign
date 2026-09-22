@@ -8,8 +8,10 @@
          sibling toolkit.
 
          Named for the domain it has an opinion about, not for the algorithm it
-         happens to use - that lives one layer down in OtterLogic.Unsupervised,
-         where a fabrication toolkit can reach it too. The Grasshopper section is
+         happens to use. How a model is read - joints, members, assemblies, load
+         paths - lives one layer down in OtterLogic.StructuralEngine, where
+         Construction and Fabrication reach it too; the clustering lives below
+         that in OtterLogic.Unsupervised. The Grasshopper section is
          "Structural Design". -->
 
     <IsPackable>true</IsPackable>
@@ -50,6 +52,19 @@
     <Otherwise>
       <ItemGroup>
         <PackageReference Include="OtterLogic.Unsupervised" Version="[$(Version)]" />
+      </ItemGroup>
+    </Otherwise>
+  </Choose>
+
+  <Choose>
+    <When Condition="Exists('$(MSBuildThisFileDirectory)..\..\..\StructuralEngine\src\OtterLogic.StructuralEngine\OtterLogic.StructuralEngine.csproj')">
+      <ItemGroup>
+        <ProjectReference Include="..\..\..\StructuralEngine\src\OtterLogic.StructuralEngine\OtterLogic.StructuralEngine.csproj" />
+      </ItemGroup>
+    </When>
+    <Otherwise>
+      <ItemGroup>
+        <PackageReference Include="OtterLogic.StructuralEngine" Version="[$(Version)]" />
       </ItemGroup>
     </Otherwise>
   </Choose>

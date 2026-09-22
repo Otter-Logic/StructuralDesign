@@ -1,3 +1,5 @@
+using OtterLogic.StructuralEngine;
+
 namespace OtterLogic.StructuralDesign;
 
 /// <summary>A level: a height the model's elements gather at.</summary>

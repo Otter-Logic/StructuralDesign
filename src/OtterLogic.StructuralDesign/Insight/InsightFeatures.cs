@@ -1,4 +1,5 @@
 using OtterLogic.MachineLearning.Preprocessing;
+using OtterLogic.StructuralEngine;
 
 namespace OtterLogic.StructuralDesign;
 

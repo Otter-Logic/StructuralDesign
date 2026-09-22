@@ -12,11 +12,12 @@ name: build
 # follows Core rather than any need of this code. The test project sets
 # RollForward=LatestMajor, so it runs on whatever the runner has.
 #
-# Four siblings. This repo names Core and Unsupervised; Unsupervised in turn
-# references MachineLearning, and MachineLearning references Graphs, so those
-# two have to be on disk too even though nothing here names them. Miss one and it falls through to a NuGet package that does not
-# exist yet, which fails *restore* and reads as a missing package rather than a
-# missing checkout.
+# Five siblings. This repo names Core, Unsupervised and StructuralEngine;
+# Unsupervised in turn references MachineLearning, and MachineLearning
+# references Graphs, so those two have to be on disk too even though nothing
+# here names them. Miss one and it falls through to a NuGet package that does
+# not exist yet, which fails *restore* and reads as a missing package rather
+# than a missing checkout.
 #
 # Cross-repo checkouts authenticate with OTTER_CI_TOKEN, a PAT with read access
 # to Otter-Logic. The automatic GITHUB_TOKEN is scoped to the one repository
@@ -67,6 +68,13 @@ jobs:
         with:
           repository: Otter-Logic/Unsupervised
           path: Unsupervised
+          token: ${{ secrets.OTTER_CI_TOKEN }}
+
+      # The structural base this toolkit's engines read the model through.
+      - uses: actions/checkout@v4
+        with:
+          repository: Otter-Logic/StructuralEngine
+          path: StructuralEngine
           token: ${{ secrets.OTTER_CI_TOKEN }}
 
       - uses: actions/setup-dotnet@v4

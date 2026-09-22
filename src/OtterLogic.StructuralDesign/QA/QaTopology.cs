@@ -1,4 +1,5 @@
 using OtterLogic.Graphs;
+using OtterLogic.StructuralEngine;
 
 namespace OtterLogic.StructuralDesign;
 
