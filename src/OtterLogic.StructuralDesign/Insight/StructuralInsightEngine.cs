@@ -116,7 +116,7 @@ public static class StructuralInsightEngine
         var paths = LoadPaths.Trace(structure, geometry, members, assemblies);
 
         // Feature extraction.
-        var supportDistance = SupportDistances(structure);
+        var supportDistance = ElementFeatures.SupportDistances(structure);
         var centrality = Centrality.Betweenness(structure.Elements);
         var features = InsightFeatures.Raw(geometry, structure, supportDistance, centrality, members, assemblies, paths);
         var (affinity, hierarchy, density) = InsightFeatures.Views(features, diagonal, members, assemblies, paths);
@@ -179,36 +179,6 @@ public static class StructuralInsightEngine
             ComponentCount = componentCount,
             Notes = notes,
         };
-    }
-
-    /// <summary>
-    /// Route length along the elements from each element to the nearest support:
-    /// the nearest of its joints. Positive infinity with no route, NaN for every
-    /// element when no supports were given.
-    /// </summary>
-    private static double[] SupportDistances(StructureGraph structure)
-    {
-        int n = structure.ElementCount;
-        var distance = new double[n];
-
-        if (!structure.HasSupports)
-        {
-            Array.Fill(distance, double.NaN);
-            return distance;
-        }
-
-        var sources = Enumerable.Range(0, structure.Joints.Length).Where(j => structure.Supported[j]).ToArray();
-        if (sources.Length == 0)
-        {
-            Array.Fill(distance, double.PositiveInfinity);
-            return distance;
-        }
-
-        var routes = Dijkstra.From(structure.Routes, sources);
-        for (int e = 0; e < n; e++)
-            distance[e] = structure.ElementJoints[e].Select(j => routes.Cost[j]).DefaultIfEmpty(double.PositiveInfinity).Min();
-
-        return distance;
     }
 
     private static (InsightFlag[] Flags, List<InsightIssue> Issues, int Components) Inspect(

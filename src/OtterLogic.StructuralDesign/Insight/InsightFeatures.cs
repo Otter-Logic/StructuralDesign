@@ -26,23 +26,18 @@ namespace OtterLogic.StructuralDesign;
 internal static class InsightFeatures
 {
     /// <summary>
-    /// The columns of the raw element features. The first twelve are as they have
-    /// always been, in the same places, so a definition reading them by position still
-    /// reads what it did; what the members, assemblies and load paths add comes after.
+    /// The columns of the raw element features — the engine's own
+    /// <see cref="ElementFeatures.Names"/>, which moved down there in 2026-09 once a
+    /// second toolkit wanted the same table. Kept here by name so the rest of the
+    /// engine reads as it did.
     /// </summary>
-    public static readonly string[] Names =
-    {
-        "Centroid X", "Centroid Y", "Centroid Z", "Size", "Extent X", "Extent Y", "Extent Z",
-        "Connections", "Support Distance", "Centrality", "Surface", "Aspect Ratio",
-        "Member Length", "Member Straightness", "Member Connections", "Ends Bearing", "Members Carried",
-        "Flow", "Level", "Assembly Members", "Depth Position", "Along Span",
-    };
+    public static string[] Names => ElementFeatures.Names;
 
-    private const int ExtentZ = 6;
-    private const int SupportDistance = 8;
-    private const int Centrality = 9;
-    private const int Surface = 10;
-    private const int Aspect = 11;
+    private const int ExtentZ = ElementFeatures.ExtentZ;
+    private const int SupportDistance = ElementFeatures.SupportDistance;
+    private const int Centrality = ElementFeatures.Centrality;
+    private const int Surface = ElementFeatures.Surface;
+    private const int Aspect = ElementFeatures.Aspect;
 
     /// <summary>The member rows' columns, in order.</summary>
     private enum Column
@@ -75,50 +70,13 @@ internal static class InsightFeatures
 
     /// <summary>
     /// The raw features, per element, in model units, ready to hand to a user's own
-    /// pipeline. Support Distance is the route length along the elements to the nearest
-    /// support, and -1 where there is no such route or no supports were given; Level is
-    /// -1 likewise. The member and assembly columns repeat down every element of the member.
+    /// pipeline: the engine's <see cref="ElementFeatures.Raw"/>, which is the same
+    /// table the Construction and Fabrication tools read.
     /// </summary>
     public static double[,] Raw(
         ElementGeometry geometry, StructureGraph structure, double[] supportDistance, double[] centrality,
         PhysicalMembers members, Assemblies assemblies, LoadPaths paths)
-    {
-        int n = structure.ElementCount;
-        var features = new double[n, Names.Length];
-
-        for (int e = 0; e < n; e++)
-        {
-            var centroid = geometry.Centroid[e];
-            var extent = geometry.Extent[e];
-            int member = members.Of[e];
-            int assembly = assemblies.Of[member];
-
-            features[e, 0] = centroid.X;
-            features[e, 1] = centroid.Y;
-            features[e, 2] = centroid.Z;
-            features[e, 3] = geometry.Size[e];
-            features[e, 4] = extent.X;
-            features[e, 5] = extent.Y;
-            features[e, ExtentZ] = extent.Z;
-            features[e, 7] = structure.Elements.Neighbours(e).Length;
-            features[e, SupportDistance] = double.IsFinite(supportDistance[e]) ? supportDistance[e] : -1.0;
-            features[e, Centrality] = centrality[e];
-            features[e, Surface] = structure.IsSurface(e) ? 1.0 : 0.0;
-            features[e, Aspect] = geometry.Aspect[e];
-            features[e, 12] = members.Length[member];
-            features[e, 13] = members.Straightness[member];
-            features[e, 14] = members.Meets[member];
-            features[e, 15] = members.EndsBearing[member];
-            features[e, 16] = members.Carried[member];
-            features[e, 17] = paths.ElementFlow[e];
-            features[e, 18] = paths.Level[assembly];
-            features[e, 19] = assemblies.Members[assembly].Length;
-            features[e, 20] = assemblies.DepthPosition[member];
-            features[e, 21] = assemblies.AlongSpan[member];
-        }
-
-        return features;
-    }
+        => ElementFeatures.Raw(geometry, structure, supportDistance, centrality, members, assemblies, paths);
 
     /// <summary>
     /// The views' matrices, one row per member, each transformed and standardised.
