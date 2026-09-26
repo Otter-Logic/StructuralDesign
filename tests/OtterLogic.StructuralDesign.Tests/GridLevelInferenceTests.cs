@@ -94,12 +94,46 @@ public class GridLevelInferenceTests
     }
 
     [Fact]
-    public void FindsTheLevelsIncludingTheMezzanine()
+    public void FindsTheLevelsWhereTheColumnsStopAndStart()
     {
+        // The mezzanine at 1.8 m has beams but no column stopping or starting there,
+        // so it is not a level, and its beams sit on none.
         var result = Example().Lines.Infer();
 
-        Assert.Equal(new[] { 0.0, 1800.0, 4000.0, 8000.0, 12300.0 }, result.Levels.Select(l => l.Elevation));
-        Assert.Equal(new[] { "Level 00", "Level 01", "Level 02", "Level 03", "Level 04" }, result.Levels.Select(l => l.Name));
+        Assert.Equal(new[] { 0.0, 4000.0, 8000.0, 12300.0 }, result.Levels.Select(l => l.Elevation));
+        Assert.Equal(new[] { "Level 00", "Level 01", "Level 02", "Level 03" }, result.Levels.Select(l => l.Name));
+        Assert.All(Enumerable.Range(result.LineCount - 4, 4), i => Assert.Equal(-1, result.StartLevel[i]));
+        Assert.Contains(0, result.Levels[1].Elements);
+        Assert.Contains(result.LineCount - 5, result.Levels[3].Elements);
+    }
+
+    /// <summary>
+    /// A curved roof on columns of one height: forty level purlins at thirty heights
+    /// are not thirty levels. The ground and the column tops are the levels, and the
+    /// purlins and rafters are on none but where they land on a column.
+    /// </summary>
+    [Fact]
+    public void APitchedRoofOfLevelPurlinsIsNotAStoreyPerPurlin()
+    {
+        var lines = new Lines();
+        double Z(double x) => 6000 + 2500 * Math.Sin(Math.PI * x / 24000);
+        for (int j = 0; j <= 2; j++)
+        {
+            double y = j * 6000;
+            foreach (double x in new[] { 0.0, 24000.0 })
+                lines.Add(x, y, 0, x, y, 6000);
+            for (int i = 0; i < 8; i++)
+                lines.Add(i * 3000, y, Z(i * 3000), (i + 1) * 3000, y, Z((i + 1) * 3000));
+        }
+
+        for (int j = 0; j < 2; j++)
+            for (int i = 1; i < 8; i++)
+                lines.Add(i * 3000, j * 6000, Z(i * 3000), i * 3000, (j + 1) * 6000, Z(i * 3000));
+
+        var result = lines.Infer();
+
+        Assert.Equal(new[] { 0.0, 6000.0 }, result.Levels.Select(l => l.Elevation));
+        Assert.DoesNotContain(result.Issues, i => result.Levels.Any(l => l.Name == i.Reference));
     }
 
     [Fact]
@@ -137,15 +171,15 @@ public class GridLevelInferenceTests
     }
 
     [Fact]
-    public void FlagsTheBeamOffItsLevel()
+    public void ABeamModelledHighMakesNoLevelAndSitsOnNone()
     {
         var (lines, _, highBeam) = Example();
         var result = lines.Infer();
 
-        var issue = Assert.Single(result.Issues, i => i.Element == highBeam);
-        Assert.Equal("Level 02", issue.Reference);
-        Assert.Equal(25.0, issue.Deviation, 6);
-        Assert.Contains("above Level 02", issue.Message);
+        Assert.Equal(4, result.Levels.Count);
+        Assert.Equal(-1, result.StartLevel[highBeam]);
+        Assert.Equal(-1, result.EndLevel[highBeam]);
+        Assert.DoesNotContain(result.Issues, i => i.Element == highBeam);
     }
 
     /// <summary>
@@ -178,7 +212,7 @@ public class GridLevelInferenceTests
         Assert.Equal(4, result.Families[0].Gridlines.Length);
         Assert.Equal(3, result.Families[1].Gridlines.Length);
         Assert.Contains(result.Families, f => Math.Abs(f.Direction - 30.0) < 1e-6);
-        Assert.Equal(5, result.Levels.Count);
+        Assert.Equal(4, result.Levels.Count);
     }
 
     [Fact]
@@ -191,8 +225,8 @@ public class GridLevelInferenceTests
 
         Assert.Equal(LineOrientation.Pitched, result.Orientation[brace]);
         Assert.Equal(0, result.StartLevel[brace]);
-        Assert.Equal(2, result.EndLevel[brace]);
-        Assert.Equal(5, result.Levels.Count);
+        Assert.Equal(1, result.EndLevel[brace]);
+        Assert.Equal(4, result.Levels.Count);
     }
 
     [Fact]
@@ -205,7 +239,7 @@ public class GridLevelInferenceTests
         var result = lines.Infer();
 
         Assert.Empty(result.Gridlines);
-        Assert.Single(result.Levels);
+        Assert.Empty(result.Levels);
         Assert.Contains(result.Notes, note => note.Contains("No plumb lines"));
     }
 

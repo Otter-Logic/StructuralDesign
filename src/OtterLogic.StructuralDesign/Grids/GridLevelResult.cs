@@ -2,11 +2,11 @@ using OtterLogic.StructuralEngine;
 
 namespace OtterLogic.StructuralDesign;
 
-/// <summary>A level: a height the model's elements gather at.</summary>
+/// <summary>A level: a height the model's columns stop and start at.</summary>
 /// <param name="Name">Its name, from <see cref="GridNaming.Level"/>.</param>
-/// <param name="Elevation">The median height of the element ends on it.</param>
+/// <param name="Elevation">The median height of the column ends on it.</param>
 /// <param name="Spread">How tightly they hold it — a robust standard deviation. Zero when most sit exactly on it.</param>
-/// <param name="Elements">Lines with at least one end on it, ascending.</param>
+/// <param name="Elements">Lines with at least one end on it, the columns that make it and everything landing on it, ascending.</param>
 public sealed record Level(string Name, double Elevation, double Spread, int[] Elements);
 
 /// <summary>A direction the grid runs in, and the gridlines along it.</summary>

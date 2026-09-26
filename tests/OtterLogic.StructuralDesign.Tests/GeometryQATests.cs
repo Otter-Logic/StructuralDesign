@@ -118,9 +118,13 @@ public class GeometryQATests
         Assert.Contains(column, miss.Elements);
     }
 
-    /// <summary>A beam 25 mm high touches nothing: a separate part, and a near miss between parts.</summary>
+    /// <summary>
+    /// A beam 25 mm high touches nothing: a separate part, and a near miss between
+    /// parts. Not off a level — levels are where the columns stop and start, and a
+    /// beam at a height of its own is on none rather than off one.
+    /// </summary>
     [Fact]
-    public void ABeamOffItsLevelIsFoundThreeWays()
+    public void ABeamOffItsLevelIsFoundTwoWays()
     {
         var model = Clean();
 
@@ -134,7 +138,19 @@ public class GeometryQATests
 
         Assert.Contains(Of(result, GeometryIssueKind.NearMiss), i => Math.Abs(i.Measure - 25) < 1e-6);
         Assert.Contains(Of(result, GeometryIssueKind.SeparatePart), i => i.Elements.Contains(beam));
-        Assert.Contains(Of(result, GeometryIssueKind.OffLevel), i => i.Elements.Contains(beam));
+        Assert.DoesNotContain(Of(result, GeometryIssueKind.OffLevel), i => i.Elements.Contains(beam));
+    }
+
+    [Fact]
+    public void AColumnStoppingShortOfItsLevelIsOffLevel()
+    {
+        var model = Clean();
+        int column = model.Starts.FindIndex(p => p[0] == 24000 && p[1] == 12000 && p[2] == 4000);
+        model.Starts[column] = new[] { 24000.0, 12000.0, 4012.0 };
+
+        var off = Assert.Single(Of(model.Check(), GeometryIssueKind.OffLevel));
+        Assert.Equal(12.0, off.Measure, 6);
+        Assert.Contains(column, off.Elements);
     }
 
     [Fact]

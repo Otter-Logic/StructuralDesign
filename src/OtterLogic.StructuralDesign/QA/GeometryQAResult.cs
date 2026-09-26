@@ -43,7 +43,7 @@ public enum GeometryIssueKind
     /// <summary>An element on a smaller scale than the elements it meets.</summary>
     ShortElement,
 
-    /// <summary>A line not quite at the height of the level it belongs to.</summary>
+    /// <summary>A column not quite at the height of the level it stops or starts at.</summary>
     OffLevel,
 
     /// <summary>A line not quite on the gridline it belongs to.</summary>

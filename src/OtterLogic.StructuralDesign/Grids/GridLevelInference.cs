@@ -15,9 +15,11 @@ namespace OtterLogic.StructuralDesign;
 /// <list type="number">
 /// <item><b>Orientation.</b> Band every line's inclination and name each band by the
 /// nearest prototype — level, pitched, plumb.</item>
-/// <item><b>Levels.</b> Band the heights of every level and plumb line's ends. Pitched
-/// lines are left out: a brace's ends mostly land on levels anyway, and a rafter's
-/// ridge would add a height that is not a floor.</item>
+/// <item><b>Levels.</b> Band the heights of the plumb lines' tops and feet, and nothing
+/// else. A level is where the columns stop and start; a beam is on a level because it
+/// lands on one, not because it lies flat. Read from every flat line's ends, a pitched
+/// roof of level purlins came out as a storey per purlin. Every other line end is then
+/// placed on the level within that level's own scatter of it, or on none.</item>
 /// <item><b>Directions.</b> Band the plan direction of every level line, on a circle of
 /// 180 degrees, so 179.8 and 0.2 are one direction.</item>
 /// <item><b>Gridlines.</b> For each direction, band the positions across it of the
@@ -88,7 +90,7 @@ public static class GridLevelInference
 
         int pitched = orientation.Count(o => o == LineOrientation.Pitched);
         if (pitched > 0)
-            notes.Add($"{pitched} pitched line(s) — braces, rafters — were left out of finding levels and grid.");
+            notes.Add($"{pitched} pitched line(s) — braces, rafters — were left out of finding the grid.");
 
         return orientation;
     }
@@ -100,70 +102,56 @@ public static class GridLevelInference
         int n = a0.Length;
         var startLevel = Enumerable.Repeat(-1, n).ToArray();
         var endLevel = Enumerable.Repeat(-1, n).ToArray();
-
-        var owners = new List<(int Line, bool IsEnd)>();
-        var heights = new List<double>();
-
-        for (int i = 0; i < n; i++)
-        {
-            if (orientation[i] is not (LineOrientation.Level or LineOrientation.Plumb))
-                continue;
-
-            owners.Add((i, false));
-            heights.Add(a0[i].Z);
-            owners.Add((i, true));
-            heights.Add(a1[i].Z);
-        }
-
         var levels = new List<Level>();
-        if (heights.Count == 0)
+
+        var columns = Enumerable.Range(0, n).Where(i => orientation[i] == LineOrientation.Plumb).ToArray();
+        if (columns.Length == 0)
         {
-            notes.Add("No level or plumb lines, so no levels could be read.");
+            notes.Add("No plumb lines, so no levels: a level is a height their tops and feet gather at.");
             return (levels, startLevel, endLevel);
         }
 
+        // Ends 2i and 2i + 1 belong to columns[i].
+        var heights = columns.SelectMany(i => new[] { a0[i].Z, a1[i].Z }).ToArray();
         var bands = ValueBands.Fit(heights, banding);
         if (!bands.Learned)
-            notes.Add($"Only {heights.Count} line ends to read levels from — too few to trust the gaps between "
+            notes.Add($"Only {heights.Length} column ends to read levels from — too few to trust the gaps between "
                 + "them, so only heights that coincide were grouped.");
 
         for (int b = 0; b < bands.Bands.Count; b++)
+            levels.Add(new Level(GridNaming.Level(b), bands.Bands[b].Median, bands.Bands[b].Spread, Array.Empty<int>()));
+
+        for (int k = 0; k < columns.Length; k++)
         {
-            var band = bands.Bands[b];
-            var elements = band.Members.Select(m => owners[m].Line).Distinct().OrderBy(i => i).ToArray();
-            levels.Add(new Level(GridNaming.Level(b), band.Median, band.Spread, elements));
+            startLevel[columns[k]] = bands.Band[2 * k];
+            endLevel[columns[k]] = bands.Band[2 * k + 1];
         }
 
-        for (int m = 0; m < owners.Count; m++)
-        {
-            var (line, isEnd) = owners[m];
-            if (isEnd)
-                endLevel[line] = bands.Band[m];
-            else
-                startLevel[line] = bands.Band[m];
-        }
-
-        // Pitched ends are not part of the population, but a brace landing on a
-        // floor is on that floor: within the band's own outlier limit of its median.
         for (int i = 0; i < n; i++)
         {
-            if (orientation[i] != LineOrientation.Pitched)
+            if (orientation[i] == LineOrientation.Plumb)
                 continue;
 
             startLevel[i] = Nearest(levels, a0[i].Z, banding);
             endLevel[i] = Nearest(levels, a1[i].Z, banding);
         }
 
-        // One issue per line and level, at the end furthest off.
-        foreach (var group in bands.Outliers.GroupBy(m => (owners[m].Line, bands.Band[m])))
+        for (int b = 0; b < levels.Count; b++)
+        {
+            var elements = Enumerable.Range(0, n).Where(i => startLevel[i] == b || endLevel[i] == b).ToArray();
+            levels[b] = levels[b] with { Elements = elements };
+        }
+
+        // A column not quite on its level: one issue per column and level, at the end furthest off.
+        foreach (var group in bands.Outliers.GroupBy(m => (Line: columns[m / 2], Level: bands.Band[m])))
         {
             int worst = group.OrderByDescending(m => Math.Abs(bands.Deviation[m])).First();
             double deviation = bands.Deviation[worst];
-            var level = levels[bands.Band[worst]];
+            var level = levels[group.Key.Level];
             string side = deviation > 0.0 ? "above" : "below";
 
             issues.Add(new PlacementIssue(group.Key.Line, level.Name, deviation,
-                $"Line {group.Key.Line} is {Math.Abs(deviation):G4} {side} {level.Name}."));
+                $"Column {group.Key.Line} is {Math.Abs(deviation):G4} {side} {level.Name}."));
         }
 
         return (levels, startLevel, endLevel);

@@ -35,7 +35,7 @@ namespace OtterLogic.StructuralDesign;
 /// <item><b>Short elements</b> — each element's length against the elements it meets,
 /// separated by scale.</item>
 /// <item><b>Alignment</b> — <see cref="GridLevelInference"/>'s levels and grid, with the
-/// lines that belong to one but are not quite on it.</item>
+/// columns that belong to one but are not quite on it.</item>
 /// </list>
 /// <para>
 /// A few findings are facts about how a solver reads a model rather than judgements,
