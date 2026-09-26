@@ -63,65 +63,43 @@ meaning. There is deliberately **no envelope, sign rule or split** either — ov
 load combinations, forces designed either way, parts that may never share a group
 — because each is a judgement about the job, and the user makes it upstream.
 
-**Structural Insight Engine** — discovers the structural intent hidden in a
-model's geometry. Lines, surfaces and supports in; nothing about what kind of
-structure it is. Frames, shells, bridges, stadium bowls, gridshells and
-parametric forms go through the same stages:
+**Section Groups** (`SectionGrouping`) — groups a steel frame's members into the
+sections they can share, from its geometry alone, before any analysis. Lines and
+supports in; a section group for every line out, with the pieces behind each
+group and the length each has to be designed over. It was the Structural Insight
+Engine until 2026-09-26; the reading and the role clustering are that engine's,
+and the question is narrower — "which members can share a section?" rather than
+"what natural groups are there?" — so QA flags went to Geometry QA and levels,
+features and the graph to Describe Member.
 
-| Stage | How | |
+| Step | How | |
 |---|---|---|
-| Input | lines as end points, surfaces as boundary corners, supports as points; refused with a reason, never repaired | `StructuralEngine.ModelInput` |
-| Graph construction | points within the join distance weld into joints; a joint resting along an element joins it; elements become a graph joined where they meet, joints a graph joined along elements | `StructuralEngine.StructureGraph` |
-| Members | lines that carry straight on through a joint are chained into one member, straightest pair first; how much of a turn still counts is learned from the model's own turns, between 5 and 30 degrees | `StructuralEngine.PhysicalMembers` |
-| Assemblies | triangles sharing a side in one plane are one body — a truss, a braced bay; a member in two planes goes to the more upright; each body gets its own span and depth | `StructuralEngine.Assemblies` |
-| Load paths | every element's weight drained to the supports as a potential flow, bending a hundred times softer than axial; hand-overs read joint by joint, summed between assemblies, loops folded, levels counted up from the ground | `StructuralEngine.LoadPaths`, `Graphs.PotentialFlow`, `Graphs.Condensation` |
-| Features | per member: length, uprightness, straightness, what frames into it and what it frames into, flow, level, place in its assembly's depth and span — nothing that refers to x, y or position in plan | `StructuralEngine.ElementGeometry`, `InsightFeatures` |
-| Unsupervised learning | four views of the members: spectral clustering of the member graph (connectivity), hierarchical clustering of what members are like wherever they are (geometry), the same over what each is like *and attached to* (role), HDBSCAN over everything (QA) | `Unsupervised.MultiViewClustering`, `Unsupervised.NeighbourhoodProfile` |
-| Fusion | co-association between every pair of members, views weighted by agreement, the count the views support over the widest range of thresholds | `Unsupervised.ConsensusClustering` |
-| Output | natural groups described by what was measured, the level of every element and the groups sorted within levels, each element's member, assembly, flow and agreement, every view's grouping, the features and graph, and QA flags | `StructuralInsightResult` |
+| Read | points welded into joints, lines that carry straight on chained into runs, triangles into bodies, every line's weight drained to the supports | `StructuralEngine.ModelReading` |
+| Cut into pieces | each run cut where it hands a substantial share of its weight on part of the way along — to the ground, to another body, or to a member carrying on through the joint — so a beam line over five columns is five beams, a column stack stays whole and a truss is not cut by its own webs | `StructuralEngine.Pieces` |
+| Role | runs sorted into role families on how they carry load and nothing else: how upright, how straight, their level, whether in a triangulated body and where in it, and whether others hand load onto them part of the way along; geometry, role and density views fused, connectivity off by default | `RoleFeatures`, `Unsupervised.MultiViewClustering` |
+| Size | each family split at its widest gap into the fewest groups within 1.3x in design length, 2x in flow and a quarter in uprightness; or into a fixed number of sections | `SizeBands` |
+| Output | per line its group and confidence; per group its pieces, design length, span, flow and level ranges; a report ending in every assumption | `SectionGroupingResult` |
 
-**What is taken as given, and what is not.** Three things are true of every
-structure and the engine leans on all three: gravity points down, weight ends at
-the supports, and a line that carries straight on through a joint is one member.
-Nothing else is assumed — there is still no rule that knows a column from a beam
-or a truss from a shell. The distinction matters because it is the difference
-between a prior and a hard-coded type: a prior about physics cannot be wrong about
-a structure nobody anticipated, and a rule about trusses can.
+**Assumed, and said.** A steel frame drawn as centrelines, lines only; simple
+connections, so a beam is a piece from bearing to bearing; a straight column
+stack is one piece, with no splices inferred; gravity down -Z; and flow — the
+share of the frame's own weight passing along a piece — as a proxy for demand,
+not a force. `SectionGrouping.Assumptions` holds the list and every report ends
+with it. After analysis, the 6DOF Behaviour Classifier groups by force.
 
-**Why members, not elements.** An analysis model breaks a sixty-metre chord at
-every joint something frames into, so element by element it is twenty three-metre
-sticks that look exactly like the purlins beside them. Read as members, one is
-sixty metres long with twenty things framing into it and the other is three
-metres long and frames into something at both ends. Everything is clustered per
-member and handed back per element.
+**Role carries no position.** Run length, connection counts, centrality and
+support distance described the old engine's members; on a six-storey frame of
+identical bays they split the beams six ways, into groups of the same length and
+flow. How long a piece is and how much it carries is the size step's question,
+not the role's. Nothing refers to x, y or position in plan: turned about the
+vertical, a frame falls into the same groups — that is tested.
 
-**Why nothing refers to x and y.** On a bowl or a fan the rafter at three o'clock
-and the one at six differ in nothing but heading, so a feature that can tell them
-apart can only do harm. Turned about the vertical, a model falls into the same
-groups on the same levels — that is tested.
+**Design length.** A standing piece is sized over its longest unbraced stretch, a
+lying one over its span, and a raking one in proportion — the same split between
+axis and bending the load path makes.
 
-**Why roles, not communities.** Spectral clustering finds regions of the graph:
-things near each other. An engineer groups things that do the same job wherever
-they are. The role view describes each member by what it is like and what it is
-attached to, two members out, and clusters that — so a chord groups with every
-other chord because each has webs on one side and purlins on the other.
-
-**Levels.** Level 0 rests on the supports, level 1 on that, and so on up; a
-truss is one level however its webs hand load between themselves, and members
-that lean on each other — a grillage, the layers of a space truss — share one.
-`Hierarchy()` sorts the natural groups within the levels, the way a member
-schedule is laid out. The flow is not a structural analysis and needs none of
-what one needs: no sections, no releases, no stable model. Where it is known to
-read differently from an engineer: a tie between the middle of a secondary and a
-primary reads as propping the secondary rather than resting on it, which is what
-the stiffnesses say and not always what was meant.
-
-Nothing is named. The groups tend to be columns, chords, webs, primary and
-secondary framing, bracing systems, diaphragm and shell zones and repeated
-modules, and a group's description — its members' length, its level and flow, its
-distance to a support, how many separate pieces it falls into — is what lets an
-engineer say which. A group in many pieces is the same kind of member recurring
-apart: a repeated module.
+**Known soft spot.** A beam triangulated with the top of a column — the top storey
+of a braced bay — is one body with it and is not cut there.
 
 The QA flags are facts, not verdicts: duplicates, degenerate elements, isolated
 and disconnected pieces, no route to a support, free ends, single elements a
@@ -155,7 +133,7 @@ On a regular frame of 1,705 members the whole engine runs in about two seconds.
 
 ```
 src/OtterLogic.StructuralDesign/   the library, published as a NuGet package
-  Insight/                         the Structural Insight Engine
+  SectionGrouping/                 Section Groups
   Grids/                           grid and level inference
   QA/                              geometry QA
 tests/                             xunit; runs anywhere, no Rhino needed

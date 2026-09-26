@@ -10,7 +10,7 @@ namespace OtterLogic.StructuralDesign;
 /// <para>
 /// Deliberately not <see cref="StructureGraph"/>, which joins ends within ten times
 /// the tolerance and reads an end resting along a member as connected to it — the
-/// generous reading the Insight Engine wants for finding groups. A solver is not
+/// generous reading Section Groups wants for finding groups. A solver is not
 /// generous: ends 5 mm apart are two nodes, and a beam end on a column face is not
 /// on the column unless the column has a node there. Checking a model for analysis
 /// means reading it as strictly as the solver will.

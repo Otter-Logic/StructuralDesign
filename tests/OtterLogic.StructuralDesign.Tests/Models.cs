@@ -8,7 +8,6 @@ internal sealed class Models
 {
     private readonly List<double[]> _starts = new();
     private readonly List<double[]> _ends = new();
-    private readonly List<double[,]> _surfaces = new();
     private readonly List<double[]> _supports = new();
 
     /// <summary>Whether each line stands up rather than lies level, in the order added.</summary>
@@ -24,40 +23,51 @@ internal sealed class Models
         return _starts.Count - 1;
     }
 
-    public void Surface(params (double X, double Y, double Z)[] corners)
-    {
-        var boundary = new double[corners.Length, 3];
-        for (int i = 0; i < corners.Length; i++)
-            (boundary[i, 0], boundary[i, 1], boundary[i, 2]) = corners[i];
-        _surfaces.Add(boundary);
-    }
-
     public void Support(double x, double y, double z) => _supports.Add(new[] { x, y, z });
 
     /// <summary>A rectilinear frame: columns at every grid point, beams both ways at every floor, pinned at the base.</summary>
     public Models Frame(int baysX, int baysY, int storeys, double bay = 6.0, double storey = 4.0, double x0 = 0.0)
+        => Frame(Enumerable.Repeat(bay, baysX).ToArray(), Enumerable.Repeat(bay, baysY).ToArray(), storeys, storey, x0);
+
+    /// <summary>
+    /// A rectilinear frame with bays of the widths given each way: columns at every grid
+    /// point, beams both ways at every floor, pinned at the base.
+    /// </summary>
+    public Models Frame(double[] baysX, double[] baysY, int storeys, double storey = 4.0, double x0 = 0.0)
     {
-        for (int i = 0; i <= baysX; i++)
-            for (int j = 0; j <= baysY; j++)
+        var xs = Grid(baysX, x0);
+        var ys = Grid(baysY, 0.0);
+
+        foreach (double x in xs)
+            foreach (double y in ys)
             {
-                Support(x0 + i * bay, j * bay, 0.0);
+                Support(x, y, 0.0);
                 for (int s = 0; s < storeys; s++)
-                    Line(x0 + i * bay, j * bay, s * storey, x0 + i * bay, j * bay, (s + 1) * storey);
+                    Line(x, y, s * storey, x, y, (s + 1) * storey);
             }
 
         for (int s = 1; s <= storeys; s++)
         {
             double z = s * storey;
-            for (int j = 0; j <= baysY; j++)
-                for (int i = 0; i < baysX; i++)
-                    Line(x0 + i * bay, j * bay, z, x0 + (i + 1) * bay, j * bay, z);
+            foreach (double y in ys)
+                for (int i = 0; i + 1 < xs.Length; i++)
+                    Line(xs[i], y, z, xs[i + 1], y, z);
 
-            for (int i = 0; i <= baysX; i++)
-                for (int j = 0; j < baysY; j++)
-                    Line(x0 + i * bay, j * bay, z, x0 + i * bay, (j + 1) * bay, z);
+            foreach (double x in xs)
+                for (int j = 0; j + 1 < ys.Length; j++)
+                    Line(x, ys[j], z, x, ys[j + 1], z);
         }
 
         return this;
+    }
+
+    private static double[] Grid(double[] bays, double origin)
+    {
+        var at = new double[bays.Length + 1];
+        at[0] = origin;
+        for (int i = 0; i < bays.Length; i++)
+            at[i + 1] = at[i] + bays[i];
+        return at;
     }
 
     /// <summary>The same model turned about the vertical through the origin — lines and supports, in the same order.</summary>
@@ -87,11 +97,11 @@ internal sealed class Models
         return turned;
     }
 
-    public StructuralInsightResult Analyse(StructuralInsightOptions? options = null)
-        => StructuralInsightEngine.Analyse(Rows(_starts), Rows(_ends), _surfaces, _supports.Count > 0 ? Rows(_supports) : null, options);
+    public SectionGroupingResult Group(SectionGroupingOptions? options = null)
+        => SectionGrouping.Group(Rows(_starts), Rows(_ends), _supports.Count > 0 ? Rows(_supports) : null, options);
 
-    public StructuralInsightResult AnalyseWithoutSupports()
-        => StructuralInsightEngine.Analyse(Rows(_starts), Rows(_ends), _surfaces, null);
+    public SectionGroupingResult GroupWithoutSupports(SectionGroupingOptions? options = null)
+        => SectionGrouping.Group(Rows(_starts), Rows(_ends), null, options);
 
     private static double[,] Rows(List<double[]> points)
     {

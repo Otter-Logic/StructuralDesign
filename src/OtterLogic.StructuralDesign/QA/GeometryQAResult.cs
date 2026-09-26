@@ -48,6 +48,13 @@ public enum GeometryIssueKind
 
     /// <summary>A line not quite on the gridline it belongs to.</summary>
     OffGrid,
+
+    /// <summary>
+    /// A line end nothing else meets and no support holds: a cantilever tip, or a
+    /// connection that was missed. Added last, since 2026-09-26, so no kind before it
+    /// changes number; it moved here from the Structural Insight Engine.
+    /// </summary>
+    FreeEnd,
 }
 
 /// <summary>One thing worth a look.</summary>
@@ -195,6 +202,7 @@ public sealed class GeometryQAResult
         GeometryIssueKind.ShortElement => "Short elements",
         GeometryIssueKind.OffLevel => "Off level",
         GeometryIssueKind.OffGrid => "Off grid",
+        GeometryIssueKind.FreeEnd => "Free ends",
         _ => kind.ToString(),
     };
 
@@ -214,6 +222,7 @@ public sealed class GeometryQAResult
         GeometryIssueKind.ShortElement => "short element",
         GeometryIssueKind.OffLevel => "off level",
         GeometryIssueKind.OffGrid => "off grid",
+        GeometryIssueKind.FreeEnd => "free end",
         _ => kind.ToString(),
     };
 

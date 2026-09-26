@@ -278,6 +278,24 @@ public class GeometryQATests
         Assert.Single(Of(floating.Check(), GeometryIssueKind.Unsupported));
     }
 
+    /// <summary>
+    /// A stub off the roof meets nothing at its tip: a free end. Without supports
+    /// every column foot would be one, so none is looked for.
+    /// </summary>
+    [Fact]
+    public void AnEndMeetingNothing_IsAFreeEnd_WhenSupportsAreGiven()
+    {
+        Assert.Empty(Of(Clean().Check(), GeometryIssueKind.FreeEnd));
+
+        var model = Clean();
+        int stub = model.Line(GridX[0], GridY[0], 8000, GridX[0] - 2000, GridY[0], 8000);
+        var free = Assert.Single(Of(model.Check(), GeometryIssueKind.FreeEnd));
+        Assert.Equal(new[] { stub }, free.Elements);
+
+        model.Supports.Clear();
+        Assert.Empty(Of(model.Check(), GeometryIssueKind.FreeEnd));
+    }
+
     /// <summary>The same faults in metres are the same faults.</summary>
     [Fact]
     public void FindingsDoNotDependOnUnits()

@@ -36,6 +36,9 @@ namespace OtterLogic.StructuralDesign;
 /// separated by scale.</item>
 /// <item><b>Alignment</b> — <see cref="GridLevelInference"/>'s levels and grid, with the
 /// columns that belong to one but are not quite on it.</item>
+/// <item><b>Free ends</b> — line ends nothing else meets and no support holds, where
+/// nothing above already explains them. Only with supports: without them every
+/// column foot is one.</item>
 /// </list>
 /// <para>
 /// A few findings are facts about how a solver reads a model rather than judgements,
@@ -111,6 +114,7 @@ public static class GeometryQA
         if (lines >= 2)
             Alignment(starts!, ends!, t, options, issues, notes);
         ShortElements(t, issues);
+        FreeEnds(t, supports, tolerance, issues);
 
         var nodes = new double[t.Nodes.Length, 3];
         for (int j = 0; j < t.Nodes.Length; j++)
@@ -710,6 +714,48 @@ public static class GeometryQA
                 $"{Capital(Name(t, e))} is {GeometryQAResult.Length(size)} long — {around / size:0}x shorter than the elements it "
                 + $"meets ({GeometryQAResult.Length(around)}), on a scale of its own. An element that much smaller than its "
                 + "neighbours can make a solve unstable."));
+        }
+    }
+
+    /// <summary>
+    /// Line ends meeting nothing, held by no support. An end already named in a near
+    /// miss, a bearing with no node or a separate part is left to that finding, which
+    /// says more; and when the main structure has no support at all, every end of it
+    /// would be free and the Unsupported finding says so once.
+    /// </summary>
+    private static void FreeEnds(QaTopology t, double[,]? supports, double tolerance, List<GeometryIssue> issues)
+    {
+        if (supports is null || supports.GetLength(0) == 0 || issues.Any(i => i.Kind == GeometryIssueKind.Unsupported))
+            return;
+
+        var held = new HashSet<int>();
+        for (int s = 0; s < supports.GetLength(0); s++)
+        {
+            var p = Vec.Row(supports, s);
+            for (int j = 0; j < t.Nodes.Length; j++)
+                if (t.Nodes[j].DistanceTo(p) <= tolerance)
+                    held.Add(j);
+        }
+
+        var explained = issues
+            .Where(i => i.Kind is GeometryIssueKind.NearMiss or GeometryIssueKind.UnnodedBearing or GeometryIssueKind.SeparatePart)
+            .SelectMany(i => i.Nodes)
+            .ToHashSet();
+
+        for (int e = 0; e < t.LineCount; e++)
+        {
+            if (t.Collapsed[e])
+                continue;
+
+            foreach (int j in t.Corners[e].Distinct())
+            {
+                if (t.ElementsAt[j].Length != 1 || held.Contains(j) || explained.Contains(j))
+                    continue;
+
+                issues.Add(new GeometryIssue(GeometryIssueKind.FreeEnd, new[] { e }, new[] { j }, At(t.Nodes[j]), 0.0,
+                    $"An end of line {e}, at node {j}, meets nothing and no support holds it: a cantilever tip, or a "
+                    + "connection that was missed."));
+            }
         }
     }
 

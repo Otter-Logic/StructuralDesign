@@ -16,7 +16,7 @@
 
     <IsPackable>true</IsPackable>
     <PackageId>OtterLogic.StructuralDesign</PackageId>
-    <Description>Multipurpose structural engineering tools for the OtterLogic Rhino tools - grouping elements by six-degree-of-freedom behaviour, and discovering the natural groups and QA issues of any structural model from its geometry.</Description>
+    <Description>Multipurpose structural engineering tools for the OtterLogic Rhino tools - grouping elements by six-degree-of-freedom behaviour, grouping a steel frame's members into sections from its geometry, and checking a model's geometry before analysis.</Description>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/Otter-Logic/StructuralDesign</PackageProjectUrl>
     <RepositoryUrl>https://github.com/Otter-Logic/StructuralDesign</RepositoryUrl>
